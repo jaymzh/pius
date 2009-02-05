@@ -1,0 +1,421 @@
+#!/usr/bin/python
+
+# vim:shiftwidth=2:tabstop=2:expandtab:textwidth=78:softtabstop=2:ai:
+
+#
+# Since most of what we do is fork gpg, this would theoretically work better
+# as a shell script. In fact, that's where this came from, a serious of poorly
+# strung-together shell scripts.
+#
+# Unfortunately, gpg's scriptability is very limited, and certain activities
+# (such as signing a single UID[1]) is only available in an interactive mode.
+# Interactive modes are not easily manipulatable in shell, so I switched a a
+# higher level language.
+#
+# However, we also need to give interactive control to the user for things
+# like typing in passphrases so we don't have to store them. The pexpect
+# module comes in handy here.
+#
+# [1] The only way to specify a UID is in --edit-key, which is interactive
+#
+# Copyright (c) 2009 Phil Dibowitz (phil@ipom.com)
+#
+#   This program is free software; you can redistribute it and/or
+#   modify it under the terms of the GNU General Public License as
+#   published by the Free Software Foundation, version 2.
+#
+
+import pexpect
+import re
+import os
+import sys
+import re
+import getpass
+import time
+import subprocess
+import socket
+from optparse import OptionParser
+
+VERSION = '1.0'
+DEFAULT_KEYRING = '~/.gnupg/pubring.gpg'
+debug_on = False
+
+
+def debug(line):
+  if debug_on:
+    print "DEBUG: ", line
+
+
+class uids_signer(object):
+
+  TMP_KEYRING = '/tmp/pius_keyring.asc'
+
+  def __init__(self, signer, cache, keyring):
+    self.signer = signer
+    self.keyring = keyring
+    self.cache_passphrase = cache
+    self.passphrase_confirmed = False
+
+  def check_fingerprint(self, key):
+    cmd = ('/usr/bin/gpg --no-default-keyring --keyring %s --fingerprint %s'
+           % (self.keyring, key))
+    gpg = os.popen(cmd, 'r')
+    print ''.join(gpg.readlines())
+    gpg.close()
+    a = raw_input("Have you verified this user/key? (y/n) ")
+    if a in ('y', 'Y', 'yes', 'Yes', 'YES'):
+      return True;
+    return False
+
+  def get_passphrase(self):
+    self.passphrase = getpass.getpass("Please enter your PGP passphrase: ")
+
+  def _clean_files(self, list):
+    for file in list:
+      if os.path.exists(file):
+        os.unlink(file)
+
+  def verify_passphrase(self):
+    magic_string = 'test1234'
+    filename = '/tmp/pius_tmp'
+    filename_enc = '/tmp/pius_tmp.gpg'
+    filename_dec = '/tmp/pius_tmp2'
+    self._clean_files([filename, filename_enc, filename_dec])
+    file = open(filename, 'w')
+    file.write(magic_string)
+    file.close()
+    cmd = ('/usr/bin/gpg --always-trust -q -r %s -e %s'
+           % (self.signer, filename))
+    debug(cmd)
+    gpg = os.popen(cmd, 'r')
+    gpg.close()
+    cmd = ('/usr/bin/gpg --passphrase-fd 0 --command-fd 0 --status-fd 1'
+           ' --batch --logger-fd 1'
+           ' -q --output %s -d %s' % (filename_dec, filename_enc))
+    debug(cmd)
+    #gpg = os.popen(cmd, 'r')
+    #gpg = pexpect.spawn(cmd)
+    gpg = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE,
+                           stdout=subprocess.PIPE,
+                           stderr=subprocess.PIPE,
+                           close_fds=True)
+
+    #gpg.expect('Enter passphrase:')
+    time.sleep(1)
+    debug('Sending passphrase')
+    #gpg.sendline(self.passphrase)
+
+    gpg.stdin.write("%s\n" % self.passphrase)
+    time.sleep(1)
+    os.kill(gpg.pid, 15)
+
+    debug('Waiting for result')
+    #gpg.expect([pexpect.EOF, 'Invalid.*', pexpect.TIMEOUT], 1)
+    gpg.wait()
+    if not os.path.exists(filename_dec):
+      debug('Resulting file %s not found' % filename_dec)
+      return False
+    file = open(filename_dec, 'r')
+    line = file.readline()
+    file.close()
+    self._clean_files([filename, filename_enc, filename_dec])
+    if line == magic_string:
+      self.passphrase_confirmed = True
+      return True
+    debug('File does not contain magic string')
+    return False
+
+  def get_uids(self, key):
+    cmd = ('/usr/bin/gpg --command-fd 0 --status-fd 1 --logger-fd 2'
+           ' --no-default-keyring '
+           ' --keyring %s --no-options --with-colons --edit-key %s'
+           % (self.keyring, key))
+    #cmd = ('/usr/bin/gpg --no-default-keyring --keyring %s --fingerprint %s'
+    debug(cmd)
+    gpg = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE,
+                           stdout=subprocess.PIPE,
+                           stderr=subprocess.PIPE,
+                           close_fds=True)
+    #gpg = pexpect.spawn(cmd)
+    #gpg.send('quit')
+
+    uids = ['empty']
+    unique_files = {}
+    while True:
+      line = gpg.stdout.readline().strip()
+      if not line:
+        debug("breaking, EOF")
+        break
+      if line in ('Command> ', '[GNUPG:] GET_LINE keyedit.prompt'):
+        debug("got to command prompt")
+        break
+      debug("Got a line %s" % line)
+      #m = re.search('^uid .* <(.*)>$', line)
+      m = re.search('^uid:(.)::::::::[^:]+ <([^:]+)>:.*:$', line.strip())
+      if m:
+        debug("match")
+        status = m.group(1)
+        email = m.group(2)
+        debug("Got UID %s with status %s" % (email, status))
+        file = re.sub('@', '_at_', email)
+        file = "%s__%s.asc" % (key, file)
+        if file in unique_files.keys():
+          file = "%s_2" % file
+        debug("got email %s" % email)
+        unique_files[file] = True
+        uids.append({'email': email, 'file': file, 'status': status})
+      else:
+        debug("else")
+        continue
+
+    debug('quitting')
+    gpg.stdin.write('quit\n')
+    debug('waiting')
+    gpg.wait()
+
+    return uids
+
+  def nuke_working_keyring(self):
+    os.unlink(uids_signer.TMP_KEYRING)
+
+  def _export_key(self, keyring, key, filename):
+    path = '/tmp/%s' % filename
+    if os.path.exists(path):
+      os.unlink(path)
+    cmd = ('/usr/bin/gpg -q --no-default-keyring --keyring %s --armor'
+           ' --output %s --export %s' % (keyring, path, key))
+    debug(cmd)
+    gpg = os.popen(cmd, 'r')
+    gpg.close()
+
+  def export_signed_uid(self, key, file):
+    debug("exporting %s" % key)
+    self._export_key(uids_signer.TMP_KEYRING, key, file)
+
+  def export_clean_key(self, key):
+    # We have to export our own public key as well
+    keys_to_export = "%s %s" % (key, self.signer)
+    self._export_key(self.keyring, keys_to_export, key)
+
+  def import_clean_key(self, key):
+    cmd = ('/usr/bin/gpg -q --no-default-keyring --keyring %s'
+                    ' --import /tmp/%s.asc' % (uids_signer.TMP_KEYRING, key))
+    debug(cmd)
+    gpg = os.popen(cmd, 'r')
+    gpg.close()
+
+  def sign_with_interact(self, gpg): 
+    print '  Passing you to gpg for passprhase.'
+    print '  Hit ^] after succesfully typing in your passphrase'
+    gpg.interact()
+    # When we return, we have a Command> prompt that w can't
+    # "expect"... or at least if the user did it right
+    print ''
+
+  def sign_with_cache_passphrase(self, gpg):
+    # It's worth noting here that the way the "sign" command works
+    # doesn't allow you to catch the "Invalid passphrase" or even the next
+    # "Command> " prompt because pexpect seems to get confused by the fact
+    # that it erases a line.
+    #
+    # As such, rather than try to catch a bad passphrase on our furst use of
+    # it, we instead very the passphrase upon asking the user for it, and then
+    # assume it's good here.
+    gpg.expect('Enter passphrase.*')
+    debug('Sending passphrase')
+    gpg.sendline(self.passphrase)
+
+  #
+  # NOTE:
+  #    This currently doesn't work with gpg-agent very seemlessly. If you have
+  #    an agent on, and you DON'T specify -p, it'll work, but you have to hit
+  #    the "special char" after each sign. If you do use -p, then we never get
+  #    a command-prompt and we get confused. I've yet to make htis work.
+  #
+  def sign_uid(self, key, index):
+    cmd = ('/usr/bin/gpg --no-default-keyring --keyring %s --default-cert-level 3'
+           ' --no-ask-cert-level --edit-key %s'
+           % (uids_signer.TMP_KEYRING, key))
+    debug(cmd)
+    gpg = pexpect.spawn(cmd)
+    gpg.setecho(False)
+    gpg.expect('Command> ')
+    debug('Selecting UID')
+    gpg.sendline(str(index))
+    gpg.expect('Command> ')
+    debug('Running sign subcommand')
+    gpg.sendline('sign')
+    line = gpg.readline()
+    if 'already signed' in line:
+      print '  UID already signed'
+      return
+    # else it's a blank line...
+
+    gpg.expect(re.compile('Really sign.*'))
+    debug('Confirming signing')
+    gpg.sendline('y')
+    if self.cache_passphrase:
+      self.sign_with_cache_passphrase(gpg)
+    else:
+      self.sign_with_interact(gpg)
+    # Unselect this UID
+    debug("unselecting uid")
+    #gpg.sendline(str(index))
+    #gpg.expect('Command> ')
+    debug('Saving key')
+    gpg.sendline('save')
+    #gpg.close()
+
+  def _wait_for_strings(self, fd, word_list):
+    line = ''
+    debug("line is nothing, wordlist is %s" % repr(word_list))
+    while line not in word_list:
+      debug("iter")
+      line = fd.readline().strip()
+      debug("got line %s" % line)
+
+  def _wait_for_prompt(self, fd):
+    self._wait_for_strings(fd, ('Command> ', '[GNUPG:] GET_LINE keyedit.prompt'))
+
+  #
+  # This is how we SHOULD be doing it, but I can't make the fd stuff work
+  # properly:
+  #  * If I use --batch, most things work but I can't specify a UID (it just
+  #    ignores it)
+  #  * If I don't use --batch it never notices when I send the passphrase.
+  #
+  def sign_uid_new(self, key, index):
+    #(f_in, f_in_2) = socket.socketpair()
+    #(f_out, f_out_2) = socket.socketpair()
+    #(f_pass, f_pass_2) = socket.socketpair()
+    cmd = ('/usr/bin/gpg --command-fd 0 --status-fd 1 --logger-fd 1'
+           ' --passphrase-fd 0 --no-default-keyring --keyring %s'
+           ' --default-cert-level 3 --batch' # --use-agent'
+           ' --no-ask-cert-level --edit-key %s' % (uids_signer.TMP_KEYRING,
+                                                   key))
+    debug(cmd)
+    #gpg = subprocess.Popen(cmd, shell=True, stdin=f_in_2,
+    #                       stdout=f_out_2,
+    #                       close_fds=True)
+    gpg = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE,
+                           stdout=subprocess.PIPE,
+                           close_fds=True)
+    #debug("in %d, out %d, pass %d" % (f_in.fileno(), f_out.fileno(),
+    #                                  f_pass.fileno()))
+    #fd_in = os.fdopen(f_in.fileno(), 'w')
+    #fd_out = os.fdopen(f_out.fileno())
+    #fd_pass = os.fdopen(f_pass.fileno(), 'w')
+
+    # wait for command prompt
+    self._wait_for_prompt(gpg.stdout)
+
+    debug('Selecting UID')
+    #fd_in.write('%s\n' % str(index))
+    time.sleep(1)
+    gpg.stdin.write('%d\n' % index)
+    #self._wait_for_prompt(fd_out)
+    debug('Running sign subcommand')
+    #fd_in.write('sign\n')
+    gpg.stdin.write('sign\n')
+    line = gpg.stdout.readline()
+    debug('LINE: %s' % line)
+    if 'already signed' in line:
+      print '  UID already signed'
+      return
+    # else it's a blank line...
+
+    self._wait_for_strings(gpg.stdout, 'Really sign? (y/N)')
+    debug('Confirming signing')
+    gpg.stdin.write('y\n')
+    self._wait_for_strings(gpg.stdout, 'Enter passphrase: ')
+    debug('Sending passphrase')
+    gpg.stdin.write("%s\n" % self.passphrase)
+
+    debug('Saving key')
+    gpg.stdin.write('save\n')
+
+    gpg.wait()
+
+  def sign_all_uids(self, key):
+    uids = self.get_uids(key)
+    print "  There are %s UIDs on this key to sign" % (len(uids) - 1)
+    # From the user key ring make a clean copy
+    self.export_clean_key(key)
+    # sys.exit(0)
+    for index in range(1, len(uids)):
+      if uids[index]['status'] == 'r':
+        debug("Skipping revoked uid")
+        continue
+      print "  Signing UID %s (%s)" % (index, uids[index]['file'])
+      # Import it to our working keyring
+      self.import_clean_key(key)
+      self.sign_uid(key, index)
+      self.export_signed_uid(key, uids[index]['file'])
+      # Delete the key from our working keyring
+      self.nuke_working_keyring()
+      self.import_clean_key(key)
+
+    print "Signed UNENCRYPTED keys: "
+    for index in range (1, len(uids)):
+      print "  %(email)s: %(file)s" % uids[index]
+
+# END class uids_signer
+
+def main():
+  global debug_on
+
+  usage = "%prog [options] <keyid> [<keyid> ...]"
+  parser = OptionParser(usage=usage, version="%%prog %s" % VERSION)
+  parser.add_option("-d", "--debug", action="store_true", dest="debug",
+                    help="Enable debug output.")
+  parser.add_option("-s", "--signer", dest="signer",
+                    help="The keyid to sign with (required).")
+  parser.add_option("-r", "--keyring", dest="keyring",
+                    default="~/.gnupg/pubring.gpg", metavar="KEYRING",
+                    help="The keyring to use. [default: %default]")
+  parser.add_option("-p", "--cache_passphrase", action="store_true",
+                    dest="cache_passphrase",
+                    help='Cache private key passphrase.')
+
+  (options, args) = parser.parse_args()
+
+  print "Welcome to PIUS, the PGP Individual UID Signer.\n"
+
+  if options.debug == True:
+    print "Setting debug"
+    debug_on = True;
+
+  if not options.signer:
+    print "You must specify a keyid to sign with."
+    sys.exit(1)
+
+  keyring = DEFAULT_KEYRING
+  if options.keyring:
+    keyring = options.keyring
+
+  if options.cache_passphrase:
+    print "The -p option doesn't work yet."
+    sys.exit(1)
+
+  if not args:
+    print "Keyid required"
+    sys.exit(1)
+
+  # TODO:
+  #    * Cleanup temp keyring
+  #    * Use FD stuff instead of pexpect
+  p = uids_signer(options.signer, options.cache_passphrase, keyring)
+  if options.cache_passphrase:
+    print ("WARNING: Using the -p option may have negative security"
+      " implications!")
+    while not p.passphrase_confirmed:
+      p.get_passphrase()
+      if not p.verify_passphrase():
+        print "Sorry, cannot unlock the key with that passphrase, try again."
+  for key in args:
+    if not p.check_fingerprint(key):
+      continue
+    print "Signing all UIDs on key %s" % key
+    p.sign_all_uids(key)
+
+main()
