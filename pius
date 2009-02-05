@@ -39,7 +39,7 @@ import subprocess
 import sys
 import time
 
-VERSION = '1.2'
+VERSION = '1.3'
 debug_on = False
 
 MODE_INTERACTIVE = 0
@@ -107,6 +107,7 @@ class uids_signer(object):
   GPG_ENC_BEG = '[GNUPG:] BEGIN_ENCRYPTION'
   GPG_ENC_END = '[GNUPG:] END_ENCRYPTION'
   GPG_ENC_INV = '[GNUPG:] INV_RECP'
+  GPG_KEY_EXP = '[GNUPG:] KEYEXPIRED'
 
   def __init__(self, signer, mode, keyring, gpg_path, tmpdir, outdir,
                encrypt_outfiles, sign_level, mail, verbose, mail_text,
@@ -282,6 +283,7 @@ class uids_signer(object):
         email = None
         debug('no email')
         id = re.sub(' ', '_', id)
+        id = re.sub('\'', '', id)
         filename = '%s__%s' % (key, id)
 
       if filename in unique_files:
@@ -330,7 +332,7 @@ class uids_signer(object):
     if os.path.exists(enc_path):
       os.unlink(enc_path)
     cmd = ('%s %s %s --no-default-keyring --keyring %s --always-trust --armor'
-           ' -r %s --output %s -e %s' %
+           ' -r %s --output \'%s\' -e \'%s\'' %
            (self.gpg, self.gpg_quiet_opts, self.gpg_fd_opts, self.tmp_keyring,
             key, enc_path, path))
     debug(cmd)
@@ -354,8 +356,11 @@ class uids_signer(object):
       elif uids_signer.GPG_ENC_INV in line:
         debug('Got GPG_ENC_INV')
         raise EncryptionKeyError
+      elif uids_signer.GPG_KEY_EXP in line:
+        debug('Got GPG_KEY_EXP')
+        raise EncryptionKeyError
       else:
-        raise EncryptionUnknownError
+        raise EncryptionUnknownError, line
 
     gpg.wait()
     return enc_path
@@ -365,7 +370,7 @@ class uids_signer(object):
     if os.path.exists(path):
       os.unlink(path)
     cmd = ('%s %s --no-default-keyring --keyring %s --armor'
-           ' --output %s --export %s' % (self.gpg, self.gpg_quiet_opts,
+           ' --output \'%s\' --export %s' % (self.gpg, self.gpg_quiet_opts,
                                          keyring, path, key))
     debug(cmd)
     gpg = os.popen(cmd, 'r')
@@ -579,10 +584,13 @@ class uids_signer(object):
         print '  Skipping revoked uid %s' % index
         continue
       sys.stdout.write('  UID %s (%s): ' % (index, uids[index]['id']))
+
       # Make sure we have a clean keyring, and then import the key we care
       # about
       self.nuke_working_keyring()
       self.import_clean_key(key)
+
+      # Sign the key...
       if self.mode in (MODE_CACHE_PASSPHRASE, MODE_AGENT):
         try:
           res = self.sign_uid(key, index)
@@ -600,14 +608,18 @@ class uids_signer(object):
         continue
       sys.stdout.write('signed')
       uids[index]['result'] = True
+
+      # Export the signed key...
       self.export_signed_uid(key, uids[index]['file'])
+
+      # If requested, encrypt the signed key...
       if self.encrypt_outfiles:
         try:
           uids[index]['enc_file'] = self.encrypt_signed_uid(key,
                                                             uids[index]['file'])
         except EncryptionKeyError:
           print ('Encryption failed due to invalid key error. User may not'
-                 ' have an encryption subkey.')
+                 ' have an encryption subkey or it may be expired.')
           uids[index]['enc_file'] = None 
         sys.stdout.write(', encrypted')
         if self.mail:
@@ -640,12 +652,15 @@ class uids_signer(object):
     # Testing
     msg = MIMEMultipart.MIMEMultipart()
     msg['From'] = self.mail
-    msg['To'] = email
+    if self.override_email:
+      msg['To'] = self.override_email
+    else:
+      msg['To'] = email
     msg['Date'] = formatdate(localtime=True)
     msg['Subject'] = 'Your signed PGP key'
     msg.epilogue = ''
 
-    # Note the line with th eemail address on it below is intentionally
+    # Note the line with the email address on it below is intentionally
     # shorter than the rest to give it space to grow and still be < 80.
     if self.mail_text:
       part = MIMEText.MIMEText(open(self.mail_text, 'r').read())
@@ -654,7 +669,7 @@ class uids_signer(object):
     msg.attach(part)
 
     part = MIMEBase.MIMEBase('application', 'octet-stream')
-    part.add_header('Content-Disposition','inline; filename="msg.asc"')
+    part.add_header('Content-Disposition','inline; filename="%s"' % filename)
     part.set_payload(open(filename, 'r').read())
     msg.attach(part)
 
@@ -704,7 +719,7 @@ def main():
   parser.add_option('-m', '--mail', dest='mail', metavar='EMAIL',
                      help='Email the encrypted, signed keys to the'
                           ' respective email addresses. EMAIL is the address'
-                          ' to send from.')
+                          ' to send from. Requires local mailserver.')
   parser.add_option('-M', '--mail-text', dest='mail_text', metavar='FILE',
                      help='Use the text in FILE as the body of email when'
                           ' sending out emails instead of the default text.'
@@ -722,7 +737,9 @@ def main():
                          ' it to gpg instead of letting gpg prompt the user'
                          ' for every UID.')
   parser.add_option('-r', '--keyring', dest='keyring', metavar='KEYRING',
-                    help='The keyring to use. [default: %default]')
+                    help='The keyring to use. Be sure to specify full or'
+                         ' relative path. Just a filename will cause GPG to'
+                         ' assume relative to ~/.gnupg. [default: %default]')
   parser.add_option('-s', '--signer', dest='signer',
                     help='The keyid to sign with (required).')
   parser.add_option('-t', '--tmp-dir', dest='tmp_dir',
@@ -801,7 +818,7 @@ def main():
   if options.import_keyring:
     if ((not options.keyring) or (options.keyring == DEFAULT_KEYRING)):
       print ('WARNING: Ignoring -i: Either -r wasn\'t specified, or it was'
-             ' was the same as the default keyring.')
+             ' the same as the default keyring.')
     else:
       p.import_unsigned_keys()
 
@@ -812,6 +829,8 @@ def main():
       p.get_passphrase()
       if not p.verify_passphrase():
         print 'Sorry, cannot unlock the key with that passphrase, try again.'
+
+  # The actual signing
   for key in list:
     if not p.check_fingerprint(key):
       continue
