@@ -40,7 +40,7 @@ import subprocess
 import sys
 import time
 
-VERSION = '1.5'
+VERSION = '1.6'
 debug_on = False
 
 MODE_INTERACTIVE = 0
@@ -115,6 +115,7 @@ class uids_signer(object):
   GPG_ENC_END = '[GNUPG:] END_ENCRYPTION'
   GPG_ENC_INV = '[GNUPG:] INV_RECP'
   GPG_KEY_EXP = '[GNUPG:] KEYEXPIRED'
+  GPG_SIG_EXP = '[GNUPG:] SIGEXPIRED'
 
   def __init__(self, signer, mode, keyring, gpg_path, tmpdir, outdir,
                encrypt_outfiles, sign_level, mail, verbose, mail_text,
@@ -153,7 +154,7 @@ class uids_signer(object):
     debug('extracting all keyids from keyring')
     cmd = ('%s --no-default-keyring --keyring %s --no-options --with-colons'
            ' --fingerprint' % (self.gpg, self.keyring))
-    debug('cmd')
+    debug(cmd)
     gpg = os.popen(cmd, 'r')
     pub_re = re.compile('^pub:')
     keyids = []
@@ -373,9 +374,13 @@ class uids_signer(object):
       elif uids_signer.GPG_ENC_INV in line:
         debug('Got GPG_ENC_INV')
         raise EncryptionKeyError
-      elif uids_signer.GPG_KEY_EXP in line:
+      elif (uids_signer.GPG_KEY_EXP in line or
+            uids_signer.GPG_SIG_EXP in line):
+        # These just mean we passed a given key/sig that's expired, there
+        # may be ones left that are good. We cannot report an error until
+        # we get a ENC_INV.
         debug('Got GPG_KEY_EXP')
-        raise EncryptionKeyError
+        continue
       else:
         raise EncryptionUnknownError, line
 
