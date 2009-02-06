@@ -3,17 +3,6 @@
 # vim:shiftwidth=2:tabstop=2:expandtab:textwidth=80:softtabstop=2:ai:
 
 #
-# This script was made from a shoddy group of shell scripts that tried to make
-# this work easier. However, gpg doesn't give the nicest interface for
-# automation, and this evolved into a much more complex script.
-#
-# Wherever possible we use the --*-fd options to gpg for automation rather
-# than screenscraping (using pexpect) since it's more resiliant. However,
-# until working with gpg-agent is full working the 'interactive' mode (which
-# requires pexpect) will remain in the code.
-#
-# Note that the only way to specify a UID is in --edit-key, without --batch.
-#
 # Copyright (c) 2008 - 2009 Phil Dibowitz (phil@ipom.com)
 #
 #   This program is free software; you can redistribute it and/or
@@ -40,7 +29,7 @@ import subprocess
 import sys
 import time
 
-VERSION = '1.6'
+VERSION = '1.7'
 debug_on = False
 
 MODE_INTERACTIVE = 0
@@ -727,7 +716,7 @@ def check_not_another_opt(option, opt, value):
   return value
 
 def check_email(option, opt, value):
-  m = re.match('\w+@\w+\.\w+', value)
+  m = re.match('.+@.+\..+', value)
   if not m:
     raise OptionValueError('Option %s: Value %s does not appear like a well'
                            ' formed email address' % (opt, value))
