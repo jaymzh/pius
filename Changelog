@@ -1,0 +1,97 @@
+1.7
+Released:
+phil@ipom.com
+- Adjust regex for email address to be much less restrictive
+
+1.6
+Released: 02/02/09
+phil@ipom.com
+- fix a debug line
+- fix a bug where we think a key is bad just because it has one expired subkey.
+
+1.5
+Released: 02/01/09
+phil@ipom.com
+- don't include full file path in mime headers, just filename
+- add configuration for specifying mail server host/port
+- clean up some error messages
+- add some hints to the option parser
+- use parser.error instead of print/exit for option issues
+- Significantly better checking on commandline options
+- Handle bad UIDs passed by the user smoothly
+- Some code refactoring
+
+1.4
+Released: 01/28/09
+phil@ipom.com
+- don't try to email if encryption failed.
+
+1.3
+Released: 01/28/09
+phil@ipom.com
+- add propfer filename to mime headers -phil
+- fix a warning
+- add some spacing and comments
+- adding support for utf8/paryn/whatever in comments
+- More fixes for UTF-8/special chars
+- handle expired subkeys nicely
+- When using override_email, make sure we put that in the headers not just the envelope
+- some helpful info in help
+
+1.2
+Released: 11/22/08
+phil@ipom.com
+- encrypt to ascii-armored
+- add option to import keyring
+- add todo
+- Handle UIDs without email addresses
+- Add option to try signing all keys on a keyring (-A)
+- Add 'quit' option to the "Have you verified this user/key?" prompt
+- Significantly improve parsing in get_uids()
+- Name files for conflicting emails *much* better (foo_2.asc, foo_3.asc, instead of foo.asc_2, foo.asc_2_2)
+- Name encrypted files MUCH better (foo_ENCRYPTED.asc instead of foo.asc.asc)
+- Better error handling on encryption errors
+- When getting all keys from the keyring (-A) use short keyid
+- a few additional fixes for UIDs without email addresses
+- much better help messages for options
+- fix buggy error message on keyring not existing
+- Add abaility to email off signed keys to respective emails
+- allow users to use tilde-expansion in keyring paths
+- update TODO list
+- alphabetize imports
+- update TODO
+- Put default email text in a variable
+- Add ability to override email text
+- Add ability to print default email text
+- Add ability to override email To
+- Add doc strings
+- Abstract commonly used gpg options into variables
+- minor cleanups in sign_all_uids()
+- remove unused code
+- separate printing of filenames into --verbose option
+
+1.1
+Released 11/20/08
+phil@ipom.com
+- get FD stuff working for -p
+- start working on FD stuff for -a
+- fix a variety of pathing bugs
+- make sign_uid_expect return the right vals
+- fix output to use --no-tty where necessary
+- tons of cleanups
+- add new use-agent mode (-a)
+- tmpdir is now configurable (-t)
+- outdir is now configurable (-o)
+- gpg bin is now configurable (-b)
+- sig level is now configurable (-l)
+- pius can now optionally encrypt the files for you (-e)
+- stop using the special word 'file' as a variable
+- better debugging
+- handle PGP2 keys better
+- cleanup all tmp files and keyrings
+- fix usage info
+
+1.0
+phil@ipom.com
+- Original version... floating around in various forms for a long time
+
