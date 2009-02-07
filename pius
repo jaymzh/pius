@@ -22,7 +22,6 @@ from copy import copy
 from optparse import OptionParser, Option, OptionValueError
 import getpass
 import os
-import pexpect
 import re
 import smtplib
 import socket
@@ -496,16 +495,6 @@ class uids_signer(object):
                                             self.tmp_keyring, path))
     self._run_and_check_status(cmd)
 
-  def sign_with_interact(self, gpg): 
-    '''Tell the user how to get out of this, and then drop them into the gpg
-    shell.'''
-    print '  Passing you to gpg for passprhase.'
-    print '  Hit ^] after succesfully typing in your passphrase'
-    gpg.interact()
-    # When we return, we have a Command> prompt that w can't
-    # 'expect'... or at least if the user did it right
-    print ''
-
   #
   # NOTE:
   #    This is a sucky hack. I may just completely delete it one day. The only
@@ -535,11 +524,16 @@ class uids_signer(object):
     gpg.expect(re.compile('Really sign.*'))
     debug('Confirming signing')
     gpg.sendline('y')
-    self.sign_with_interact(gpg)
+    '''Tell the user how to get out of this, and then drop them into the gpg
+    shell.'''
+    print '  Passing you to gpg for passprhase.'
+    print '  Hit ^] after succesfully typing in your passphrase'
+    gpg.interact()
+    # When we return, we have a Command> prompt that w can't
+    # 'expect'... or at least if the user did it right
+    print ''
     # Unselect this UID
     debug('unselecting uid')
-    #gpg.sendline(str(index))
-    #gpg.expect('Command> ')
     debug('Saving key')
     gpg.sendline('save')
     #gpg.close()
@@ -990,6 +984,14 @@ def check_options(parser, options, args):
       parser.error('Keyid required')
   elif not options.keyring:
       parser.error('The -A options requires the -r option')
+
+  if options.mode == MODE_INTERACTIVE:
+    try:
+      global pexpect
+      import pexpect
+    except ImportError:
+      parser.error('You chose interactive mode but do not have the pexpect'
+                   ' module installed.')
 
   if options.mail and options.no_pgp_mime and not options.encrypt_outfiles:
     print 'NOTE: -O and -m are present, turning on -e'

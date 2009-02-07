@@ -13,6 +13,7 @@ phil@ipom.com
 - Make cache_passphrase mode default
 - Add prompt about sending email if user didn't specify
 - Move import of keyring to end
+- Only import pexpect if we need it
 
 1.7
 Released:
