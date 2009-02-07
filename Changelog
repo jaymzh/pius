@@ -14,6 +14,7 @@ phil@ipom.com
 - Add prompt about sending email if user didn't specify
 - Move import of keyring to end
 - Only import pexpect if we need it
+- Add support for STARTTLS and SMTPAUTH when sending email
 
 1.7
 Released:
