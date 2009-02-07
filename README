@@ -63,6 +63,7 @@ There are a variety of other options that you may want:
   * customize mail hostname and port (-H and -P respectively)
   * customize the email message (-M)
   * don't use PGP/Mime in the email (-O, implies -e)
+  * specify a SMTPAUTH or STARTTLS for SMTP (-u and -S)
 
 And more! See the '-h' option for more.
 
@@ -102,6 +103,9 @@ sent, you can either do:
 To have PIUS dump the text of the default email body, or you can use the -n
 option to forcefully override the TO in the envelope of the email. When doing
 this *only* the address specified as an argument to -n will get the email.
+
+If you want to see the email sent when not using PGP/Mime then try:
+  $ pius -T -O
 
 
 LICENSE
