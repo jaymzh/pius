@@ -11,6 +11,10 @@ them to the respective emails."""
 #   modify it under the terms of the GNU General Public License as
 #   published by the Free Software Foundation, version 2.
 #
+# Note that we only import pexpect if -i is specified. In order to do this
+# in a relatively clean way (if you just import it it will only be local), we
+# use a trick that pylint will complain about. I'm quite alright with that.
+#
 # TODO:
 #   - Offer ability to "pick up where we left off"
 #
@@ -258,6 +262,7 @@ class uids_signer(object):
     self.mail_pass = getpass.getpass('Please enter your mail server password: ')
 
   def verify_mail_pass(self):
+    '''Verify the password we got works for SMTPAUTH.'''
     smtp = smtplib.SMTP(self.mail_host, self.mail_port)
     # NOTE WELL: SECURITY IMPORTANT NOTE!
     # In python 2.6 if you attempt to starttls() and the server doesn't
@@ -961,8 +966,9 @@ class uids_signer(object):
       if self.mail_tls:
         # NOTE WELL: SECURITY IMPORTANT NOTE!
         # In python 2.6 if you attempt to starttls() and the server doesn't
-        # understand an exception is raised. However before that, it just carried on
-        # and one could attempt to auth over a plain-text session. This is BAD!
+        # understand an exception is raised. However before that, it just
+        # carried on # and one could attempt to auth over a plain-text session.
+        # This is BAD!
         #
         # So, in order be secure on older pythons we ehlo() and then check the
         # response before attempting startls.
@@ -1231,8 +1237,8 @@ def main():
       signer.get_mail_pass()
       try:
         if not signer.verify_mail_pass():
-          print ('Sorry, cannot authenticate to %s as %s with that passwword, try'
-                 ' again.' % (signer.mail_host, signer.mail_user))
+          print ('Sorry, cannot authenticate to %s as %s with that passwword,'
+                 ' try again.' % (signer.mail_host, signer.mail_user))
         else:
           break
       except MailSendError, msg:
@@ -1257,4 +1263,5 @@ def main():
 
   signer.cleanup()
 
-main()
+if __name__ == '__main__':
+  main()
