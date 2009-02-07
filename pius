@@ -3,17 +3,6 @@
 # vim:shiftwidth=2:tabstop=2:expandtab:textwidth=80:softtabstop=2:ai:
 
 #
-# This script was made from a shoddy group of shell scripts that tried to make
-# this work easier. However, gpg doesn't give the nicest interface for
-# automation, and this evolved into a much more complex script.
-#
-# Wherever possible we use the --*-fd options to gpg for automation rather
-# than screenscraping (using pexpect) since it's more resiliant. However,
-# until working with gpg-agent is full working the 'interactive' mode (which
-# requires pexpect) will remain in the code.
-#
-# Note that the only way to specify a UID is in --edit-key, without --batch.
-#
 # Copyright (c) 2008 - 2009 Phil Dibowitz (phil@ipom.com)
 #
 #   This program is free software; you can redistribute it and/or
@@ -22,15 +11,16 @@
 #
 # TODO:
 #   - Offer ability to "pick up where we left off"
+#   - Add TLS/auth support to SMTP
 #
 
 from email import MIMEBase
 from email import MIMEMultipart
 from email import MIMEText
 from email.Utils import formatdate
-import getpass
-from optparse import OptionParser, Option, OptionValueError
 from copy import copy
+from optparse import OptionParser, Option, OptionValueError
+import getpass
 import os
 import pexpect
 import re
@@ -40,7 +30,7 @@ import subprocess
 import sys
 import time
 
-VERSION = '1.6+DEV'
+VERSION = '2.0.0-BETA'
 debug_on = False
 
 MODE_INTERACTIVE = 0
@@ -49,8 +39,8 @@ MODE_AGENT = 2
 
 DEFAULT_GPG_PATH = '/usr/bin/gpg'
 DEFAULT_KEYRING = '~/.gnupg/pubring.gpg'
-DEFAULT_TMP_DIR = '/tmp'
-DEFAULT_OUT_DIR = '/tmp'
+DEFAULT_TMP_DIR = '/tmp/pius_tmp'
+DEFAULT_OUT_DIR = '/tmp/pius_out'
 DEFAULT_MAIL_HOST = 'localhost'
 DEFAULT_MAIL_PORT = 25
 
@@ -958,7 +948,7 @@ def check_not_another_opt(option, opt, value):
   return value
 
 def check_email(option, opt, value):
-  m = re.match('\w+@\w+\.\w+', value)
+  m = re.match('.+@.+\..+', value)
   if not m:
     raise OptionValueError('Option %s: Value %s does not appear like a well'
                            ' formed email address' % (opt, value))
@@ -990,9 +980,6 @@ def check_options(parser, options, args):
   if not options.signer:
     parser.error('You must specify a keyid to sign with.')
 
-  if options.cache_passphrase and options.agent:
-    parser.error('You can only select one (or none) of -a or -p')
-
   if options.keyring:
     options.keyring = os.path.expanduser(options.keyring)
     if not os.path.exists(options.keyring):
@@ -1023,16 +1010,18 @@ def main():
            '       %prog [options] -A -r <keyring_path> -s <signer_keyid>')
   parser = OptionParser(usage=usage, version='%%prog %s' % VERSION,
                         option_class=MyOption)
-  parser.set_defaults(gpg_path=DEFAULT_GPG_PATH,
+  parser.set_defaults(mode=MODE_CACHE_PASSPHRASE,
+                      gpg_path=DEFAULT_GPG_PATH,
                       out_dir=DEFAULT_OUT_DIR,
                       tmp_dir=DEFAULT_TMP_DIR,
                       keyring=DEFAULT_KEYRING,
                       mail_host=DEFAULT_MAIL_HOST,
                       mail_port=DEFAULT_MAIL_PORT,
                       sign_level='3')
-  parser.add_option('-a', '--use-agent', action='store_true', dest='agent',
+  parser.add_option('-a', '--use-agent', action='store_const', const=MODE_AGENT,
+                    dest='mode',
                     help='Use pgp-agent instead of letting gpg prompt the'
-                         ' user for every UID.')
+                         ' user for every UID. [default: false]')
   parser.add_option('-A', '--all-keys', action='store_true', dest='all_keys',
                     help='Sign all keys on the keyring. Requires -r.')
   parser.add_option('-b', '--gpg-path', dest='gpg_path', metavar='PATH',
@@ -1045,7 +1034,11 @@ def main():
                     help='Enable debugging output.')
   parser.add_option('-H', '--mail_host', dest='mail_host', metavar='HOSTNAME',
                     nargs=1, help='Hostname of SMTP server. [default: %default]')
-  parser.add_option('-i', '--import', action='store_true',
+  parser.add_option('-i', '--interactive', action='store_const',
+                    const=MODE_INTERACTIVE, dest='mode', help='Use the pexpect'
+                      ' module for signing and drop to the gpg shell for'
+                      ' entering the passphrase. [default: false]')
+  parser.add_option('-I', '--import', action='store_true',
                     dest='import_keyring',
                     help='Also import the unsigned keys from the keyring'
                          ' into the default keyring. Ignored if -r is not'
@@ -1075,11 +1068,11 @@ def main():
   parser.add_option('-O', '--no-pgp-mime', action='store_true',
                     dest='no_pgp_mime',
                     help='Do not use PGP/Mime when sending email.')
-  parser.add_option('-p', '--cache_passphrase', action='store_true',
-                    dest='cache_passphrase',
+  parser.add_option('-p', '--cache_passphrase', action='store_const',
+                    const=MODE_CACHE_PASSPHRASE, dest='mode',
                     help='Cache private key passphrase in memory and provide'
                          ' it to gpg instead of letting gpg prompt the user'
-                         ' for every UID.')
+                         ' for every UID. [default: true]')
   parser.add_option('-P', '--mail_port', dest='mail_port', metavar='PORT',
                     nargs=1, type='int',
                     help='Port of SMTP server. [default: %default]')
@@ -1111,18 +1104,23 @@ def main():
 
   # Check input to make sure users want sane things
   check_options(parser, options, args)
- 
-  mode = MODE_INTERACTIVE
-  if options.cache_passphrase:
-    mode = MODE_CACHE_PASSPHRASE
-  elif options.agent:
-    mode = MODE_AGENT
 
-  p = uids_signer(options.signer, mode, options.keyring, options.gpg_path,
-                  options.tmp_dir, options.out_dir, options.encrypt_outfiles,
-                  options.sign_level, options.mail, options.verbose,
-                  options.mail_text, options.override_email, options.mail_host,
-                  options.mail_port, options.no_pgp_mime)
+  # Check to see if the user wants to send email if they didn't specify
+  if not options.mail:
+    ans = raw_input('Would you like to automatically send the signed UIDs to'
+                    ' their owners using\nPGP/Mime encryption as you sign each'
+                    ' one? ')
+    if ans in ('y', 'Y', 'yes', 'YES', 'Yes'):
+      ans = raw_input('What email address should we send from? ')
+      check_email(parser, '-m', ans)
+      options.mail = ans
+      print
+ 
+  p = uids_signer(options.signer, options.mode, options.keyring,
+                  options.gpg_path, options.tmp_dir, options.out_dir,
+                  options.encrypt_outfiles, options.sign_level, options.mail,
+                  options.verbose, options.mail_text, options.override_email,
+                  options.mail_host, options.mail_port, options.no_pgp_mime)
 
   if options.all_keys:
     list = p.get_all_keyids()
@@ -1134,16 +1132,8 @@ def main():
   else:
     list = args
 
-  if options.import_keyring:
-    if ((not options.keyring) or (options.keyring == DEFAULT_KEYRING)):
-      print ('WARNING: Ignoring -i: Either -r wasn\'t specified, or it was'
-             ' the same as the default keyring.')
-    else:
-      p.import_unsigned_keys()
-
-  if options.cache_passphrase:
-    print ('WARNING: Using the -p option may have negative security'
-      ' implications!')
+  if options.mode == MODE_CACHE_PASSPHRASE:
+    print ('NOTE: See the README about security implications.')
     while not p.passphrase_confirmed:
       p.get_passphrase()
       if not p.verify_passphrase():
@@ -1155,6 +1145,14 @@ def main():
       continue
     print 'Signing all UIDs on key %s' % key
     p.sign_all_uids(key)
+
+  # If the user asked, import the keys
+  if options.import_keyring:
+    if ((not options.keyring) or (options.keyring == DEFAULT_KEYRING)):
+      print ('WARNING: Ignoring -i: Either -r wasn\'t specified, or it was'
+             ' the same as the default keyring.')
+    else:
+      p.import_unsigned_keys()
 
   p.cleanup()
 
