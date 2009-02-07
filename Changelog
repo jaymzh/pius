@@ -1,5 +1,5 @@
 2.0.0
-Released:
+Released: 02/07/09
 phil@ipom.com
 - Add support for PGP/Mime, make it default
 - Significant improvement to error checking and handling of gpg calls
@@ -16,6 +16,7 @@ phil@ipom.com
 - Only import pexpect if we need it
 - Add support for STARTTLS and SMTPAUTH when sending email
 - Guard main() in an if __name__ == '__main__' to allow pydoc to work on pius
+- Added a spec file
 
 1.7
 Released: 02/06/09

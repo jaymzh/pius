@@ -33,7 +33,7 @@ import socket
 import subprocess
 import sys
 
-VERSION = '2.0.0-BETA'
+VERSION = '2.0.0'
 DEBUG_ON = False
 
 MODE_INTERACTIVE = 0
