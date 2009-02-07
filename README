@@ -52,12 +52,16 @@ secure and convenient method, but sometimes gpg-agent can be flaky.
 
 After a keysigning party you probably have a party keyring provided by the
 organizer and want to sign most of the keys on it. In this case, don't specify
-the all the keyids to sign and instead probably want:
-  $ pius -A -r </path/to/keyring.gpg> -e -s <your_keyid>
+the all the keyids to sign. You probably also want to automatically send off
+emails with the encrypted signatures to all of the UIDs that you verify. In
+that case you want:
+  $ pius -A -e -m <your_email> -r </path/to/keyring.gpg> -s <your_keyid>
 
 The -r flag specifies a keyring to use, and the -A flag says to sign all keyids
-on tha tkeyring. Since you are prompted to verify each fingerprint, you can say
-no to any people on the ring you were unable to verify.
+on that keyring. Since you are prompted to verify each fingerprint, you can say
+no to any people on the ring you were unable to verify. The -e flag says to
+encrypt the exported keyfile and the -m flag says to email it using the
+provided address as the From.
 
 There are a variety of other options that you may want:
   * customize the tmpdir and outdir directories (-t and -o respectively)
