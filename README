@@ -93,7 +93,7 @@ first is that the pexpect code is quite fragile, and the second is that you'll
 have to type your passphrase for every key-UID combination.
 
 
-A NOTE ON SENDING EMAILS
+SENDING EMAILS
 
 When PIUS emails out keys it BCC's you, so you will get a copy of every email
 sent out. If you would like to see what is going to be sent and not have it
@@ -106,6 +106,12 @@ this *only* the address specified as an argument to -n will get the email.
 
 If you want to see the email sent when not using PGP/Mime then try:
   $ pius -T -O
+
+If you want to customize this message you can do so with the -M option. Note
+that you may use python's named variable interpolation syntax here to have pius
+fill in email (the email in the UID, i.e. the recipient), keyid (of the key that
+was signed), and signer (the keyid used to sign, i.e. your keyid). For example,
+you can simply include "%(keyid)s" (without the quotes) to get the keyid.
 
 
 LICENSE
