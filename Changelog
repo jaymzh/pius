@@ -1,3 +1,8 @@
+2.0.1
+Released: 02/28/09
+phil@ipom.com
+- Fix bug where pius would occasionally report a good key as bad
+
 2.0.0
 Released: 02/07/09
 phil@ipom.com

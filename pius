@@ -33,7 +33,7 @@ import socket
 import subprocess
 import sys
 
-VERSION = '2.0.0'
+VERSION = '2.0.1'
 DEBUG_ON = False
 
 MODE_INTERACTIVE = 0
@@ -232,8 +232,8 @@ class uids_signer(object):
 
   def check_fingerprint(self, key):
     '''Prompt the user to see if they have verified this fingerprint.'''
-    cmd = ('%s --no-default-keyring --keyring %s --fingerprint %s'
-           % (self.gpg, self.keyring, key))
+    cmd = ('%s %s --no-default-keyring --keyring %s --fingerprint %s'
+           % (self.gpg, self.gpg_quiet_opts, self.keyring, key))
     # Note we attach stderr to a pipe so it won't print errors to the terminal
     # which it does even if stderr=None
     debug(cmd)
