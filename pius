@@ -123,6 +123,12 @@ class PassphraseError(Exception):
   pass
 
 
+class NoSelfKeyError(Exception):
+  '''An exception for when the user didn't include their own public key in the
+  keyring.'''
+  pass
+
+
 class EncryptionKeyError(Exception):
   '''An exception for when a key can't encrypt (no encryption subkey).'''
   pass
@@ -636,18 +642,36 @@ class uids_signer(object):
     gpg.stdin.write('sign\n')
     self.gpg_wait_for_string(gpg.stdout, uids_signer.GPG_ACK)
 
-    # Either we already signed this, or we can proceed
-    line = gpg.stdout.readline()
-    debug('Got %s' % line)
-    if uids_signer.GPG_ALREADY_SIGNED in line:
-      print '  UID already signed'
-      gpg.stdin.write('quit\n')
-      return False
-    elif not uids_signer.GPG_CONFIRM in line:
-      print '  ERROR: GnuPG reported an unknown error'
-      gpg.stdin.write('quit\n')
-      return False
-    # else its uids_signer.GPG_CONFIRM...
+    while True:
+      debug('Waiting for response')
+      line = gpg.stdout.readline()
+      debug('Got %s' % line)
+      if uids_signer.GPG_ALREADY_SIGNED in line:
+        print '  UID already signed'
+        gpg.stdin.write('quit\n')
+        return False
+      elif (uids_signer.GPG_KEY_EXP in line or
+            uids_signer.GPG_SIG_EXP in line):
+        # The user has an expired signing or encryption key, keep going
+        debug('Got GPG_KEY/SIG_EXP')
+        continue
+      elif uids_signer.GPG_PROMPT in line:
+        # Unfortunately PGP doesn't give us anything parsable in this case. It
+        # just gives us another prompt. We give the most likely problem. Best we
+        # can do.
+        print ('  ERROR: GnuPG won\'t let us sign, this probably means it can\'t'
+               ' find a secret key, which most likely means that the keyring you'
+               ' are using doesn\'t have _your_ _public_ key on it.')
+        gpg.stdin.write('quit\n')
+        raise NoSelfKeyError
+      elif uids_signer.GPG_CONFIRM in line:
+        # This is what we want
+        break
+      else:
+        print '  ERROR: GnuPG reported an unknown error'
+        gpg.stdin.write('quit\n')
+        # Don't raise an exception, it's not probably just this UID...
+        return False
 
     debug('Confirming signing')
     gpg.stdin.write('Y\n')
@@ -730,6 +754,9 @@ class uids_signer(object):
         except PassphraseError:
           print ('\nThe passphrase that worked a moment ago now doesn\'t work.'
                  ' I\'m bailing out!')
+          sys.exit(1)
+        except NoSelfKeyError:
+          # No need to say anything else
           sys.exit(1)
       else:
         res = self.sign_uid_expect(key, index)
