@@ -1,3 +1,10 @@
+CVS
+Released:
+phil@ipom.com
+- Catch the case where a users' public key isn't on the keyring and report it
+  to the user instead of just failing
+- Handle expired subkeys on the _signers'_ key
+
 2.0.1
 Released: 02/28/09
 phil@ipom.com
