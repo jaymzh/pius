@@ -1,3 +1,29 @@
+2.0.1
+Released: 02/28/09
+phil@ipom.com
+- Fix bug where pius would occasionally report a good key as bad
+
+2.0.0
+Released: 02/07/09
+phil@ipom.com
+- Add support for PGP/Mime, make it default
+- Significant improvement to error checking and handling of gpg calls
+- Minimize keys in import
+- Better input checking
+- Various code cleanups
+- Support named interpolation in email templates
+- Use proper extension for our tmp keyring
+- Change default tmp/out directories to something more sane
+- Fix handling of mode (-p, -i, -a)
+- Make cache_passphrase mode default
+- Add prompt about sending email if user didn't specify
+- Move import of keyring to end
+- Only import pexpect if we need it
+- Add support for STARTTLS and SMTPAUTH when sending email
+- Guard main() in an if __name__ == '__main__' to allow pydoc to work on pius
+- Added a spec file
+- Add notes to the README on how to write custom emails
+
 1.7
 Released: 02/06/09
 phil@ipom.com

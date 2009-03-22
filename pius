@@ -1,4 +1,6 @@
 #!/usr/bin/python
+"""A utility to sign all UIDs on a list of PGP keys and PGP/Mime encrypt-email
+them to the respective emails."""
 
 # vim:shiftwidth=2:tabstop=2:expandtab:textwidth=80:softtabstop=2:ai:
 
@@ -9,6 +11,10 @@
 #   modify it under the terms of the GNU General Public License as
 #   published by the Free Software Foundation, version 2.
 #
+# Note that we only import pexpect if -i is specified. In order to do this
+# in a relatively clean way (if you just import it it will only be local), we
+# use a trick that pylint will complain about. I'm quite alright with that.
+#
 # TODO:
 #   - Offer ability to "pick up where we left off"
 #
@@ -17,20 +23,18 @@ from email import MIMEBase
 from email import MIMEMultipart
 from email import MIMEText
 from email.Utils import formatdate
-import getpass
-from optparse import OptionParser, Option, OptionValueError
 from copy import copy
+from optparse import OptionParser, Option, OptionValueError
+import getpass
 import os
-import pexpect
 import re
 import smtplib
 import socket
 import subprocess
 import sys
-import time
 
-VERSION = '1.7'
-debug_on = False
+VERSION = '2.0.1'
+DEBUG_ON = False
 
 MODE_INTERACTIVE = 0
 MODE_CACHE_PASSPHRASE = 1
@@ -38,24 +42,56 @@ MODE_AGENT = 2
 
 DEFAULT_GPG_PATH = '/usr/bin/gpg'
 DEFAULT_KEYRING = '~/.gnupg/pubring.gpg'
-DEFAULT_TMP_DIR = '/tmp'
-DEFAULT_OUT_DIR = '/tmp'
+DEFAULT_TMP_DIR = '/tmp/pius_tmp'
+DEFAULT_OUT_DIR = '/tmp/pius_out'
 DEFAULT_MAIL_HOST = 'localhost'
 DEFAULT_MAIL_PORT = 25
 
-DEFAULT_EMAIL_TEXT = '''Hello,
+# Note the line with the email address on it below is intentionally
+# shorter than the rest to give it space to grow and still be < 80.
+DEFAULT_MIME_EMAIL_TEXT = '''Hello,
 
-Attached is a copy of your PGP key (0x%s) signed by my key (0x%s).
+Attached is a copy of your PGP key (0x%(keyid)s) signed by my key
+(0x%(signer)s).
 
 If your key has more than one UID, than this key only has the UID associated
-with this email address (%s) signed and you will receive additional
-emails containing signatures of the other UIDs at the respective email
-addresses.
+with this email address (%(email)s) signed and you will receive
+additional emails containing signatures of the other UIDs at the respective
+email addresses.
 
-Please take the attached message and decrypt it and then import it. Something
-like this should work:
+Please take the attached message and decrypt it and then import it.
+Something like this should work:
+
+   gpg --import <file>
+
+(In mutt ctrl-k will do this.)
+
+Then, don't forget to send it to a keyserver:
+
+   gpg --keyserver pool.sks-keyservers.net --send-key %(keyid)s
+
+If you have any questions, let me know.
+
+'''
+
+DEFAULT_NON_MIME_EMAIL_TEXT = '''Hello,
+
+Attached is a copy of your PGP key (0x%(keyid)s) signed by my key
+(0x%(signer)s).
+
+If your key has more than one UID, than this key only has the UID associated
+with this email address (%(email)s) signed and you will receive
+additional emails containing signatures of the other UIDs at the respective
+email addresses.
+
+Please take the attached message and decrypt it and then import it.
+Something like this should work:
 
    gpg -d <file> | gpg --import
+
+Then, don't forget to send it to a keyserver:
+
+   gpg --keyserver pool.sks-keyservers.net --send-key %(keyid)s
 
 If you have any questions, let me know.
 
@@ -63,37 +99,54 @@ If you have any questions, let me know.
 
 def debug(line):
   '''Print a line, if debug is on, preceeded with DEBUG:.'''
-  if debug_on:
+  if DEBUG_ON:
     print 'DEBUG:', line
 
-def print_default_email():
+def print_default_email(no_mime):
+  '''Print the default email that is sent out.'''
+  interpolation_dict = {'keyid': '<keyid>', 'signer': '<signer>',
+                        'email': '<email>'}
   print 'DEFAULT EMAIL TEXT:\n'
-  print (DEFAULT_EMAIL_TEXT % ('<keyid>', '<signer>', '<email>'))
+  if not no_mime:
+    print DEFAULT_MIME_EMAIL_TEXT % interpolation_dict
+  else:
+    print DEFAULT_NON_MIME_EMAIL_TEXT % interpolation_dict
+
 
 class AgentError(Exception):
   '''An exception for when Agent sucks.'''
   pass
 
+
 class PassphraseError(Exception):
   '''An exception for when a 'good' cached passphrase didn't work.'''
   pass
+
 
 class EncryptionKeyError(Exception):
   '''An exception for when a key can't encrypt (no encryption subkey).'''
   pass
 
+
 class EncryptionUnknownError(Exception):
-  '''An exception for for NOT the above. Should never happen.'''
+  '''An exception for NOT the above. Should never happen.'''
   pass
+
+
+class GpgUnknownError(Exception):
+  '''An exception for NOT the above. Should never happen.'''
+  pass
+
 
 class MailSendError(Exception):
   '''An exception for for NOT the above. Should never happen.'''
   pass
 
+
 class uids_signer(object):
   '''Main class for signing UIDs.'''
 
-  TMP_KEYRING_FILE = 'pius_keyring.asc'
+  TMP_KEYRING_FILE = 'pius_keyring.gpg'
 
   GPG_PROMPT = '[GNUPG:] GET_LINE keyedit.prompt'
   GPG_ACK = '[GNUPG:] GOT_IT'
@@ -105,14 +158,19 @@ class uids_signer(object):
   GPG_ENC_INV = '[GNUPG:] INV_RECP'
   GPG_KEY_EXP = '[GNUPG:] KEYEXPIRED'
   GPG_SIG_EXP = '[GNUPG:] SIGEXPIRED'
+  GPG_USERID = '[GNUPG:] USERID_HINT'
+  GPG_NEED_PASS = '[GNUPG:] NEED_PASSPHRASE'
+  GPG_GOOD_PASS = '[GNUPG:] GOOD_PASSPHRASE'
+  GPG_SIG_BEG = '[GNUPG:] BEGIN_SIGNING'
+  GPG_SIG_CREATED = '[GNUPG:] SIG_CREATED'
 
   def __init__(self, signer, mode, keyring, gpg_path, tmpdir, outdir,
                encrypt_outfiles, sign_level, mail, verbose, mail_text,
-               override_email, mail_host, mail_port):
+               mail_override, mail_host, mail_port, mail_no_pgp_mime, mail_user,
+               mail_tls):
     self.mode = mode
     self.signer = signer
     self.keyring = keyring
-    self.passphrase_confirmed = False
     self.gpg = gpg_path
     self.tmpdir = tmpdir
     self.outdir = outdir
@@ -120,29 +178,42 @@ class uids_signer(object):
     self.sign_level = sign_level
     self.mail = mail
     self.mail_text = mail_text
-    self.verbose = verbose
-    self.override_email = override_email
+    self.mail_override = mail_override
     self.mail_host = mail_host
     self.mail_port = mail_port
+    self.mail_no_pgp_mime = mail_no_pgp_mime
+    self.mail_tls = mail_tls
+    self.mail_user = mail_user
+    self.mail_pass = ''
+    self.verbose = verbose
+    self.passphrase = ''
     self.tmp_keyring = '%s/%s' % (self.tmpdir, uids_signer.TMP_KEYRING_FILE)
     self.gpg_quiet_opts = '-q --no-tty --no-auto-check-trustdb --batch'
     self.gpg_fd_opts = '--command-fd 0 --passphrase-fd 0 --status-fd 1'
+
+  def _outfile_path(self, ofile):
+    '''Internal function to take a filename and put it in self.outdir.'''
+    return '%s/%s' % (self.outdir, ofile)
+
+  def _tmpfile_path(self, tfile):
+    '''Internal function to take a filename and put it in self.tmpdir.'''
+    return '%s/%s' % (self.tmpdir, tfile)
 
   def cleanup(self):
     '''Cleanup all our temp files.'''
     self._clean_files([self.tmp_keyring, ('%s~' % self.tmp_keyring)])
 
-  def _clean_files(self, list):
+  def _clean_files(self, flist):
     '''Delete a list of files.'''
-    for file in list:
-      if os.path.exists(file):
-        os.unlink(file)
+    for cfile in flist:
+      if os.path.exists(cfile):
+        os.unlink(cfile)
 
   def get_all_keyids(self):
     '''Given a keyring, get all the KeyIDs from it.'''
     debug('extracting all keyids from keyring')
     cmd = ('%s --no-default-keyring --keyring %s --no-options --with-colons'
-           ' --fingerprint' % (self.gpg, self.keyring))
+           ' --fingerprint 2>&1' % (self.gpg, self.keyring))
     debug(cmd)
     gpg = os.popen(cmd, 'r')
     pub_re = re.compile('^pub:')
@@ -150,21 +221,22 @@ class uids_signer(object):
     for line in gpg.readlines():
       if not pub_re.search(line):
         continue
-      id = line.split(':')[4]
+      uid = line.split(':')[4]
       # get the shirt version
-      id = id[8:16]
-      debug('Got id %s' % id)
-      keyids.append(id)
+      uid = uid[8:16]
+      debug('Got id %s' % uid)
+      keyids.append(uid)
     gpg.close()
 
     return keyids
 
   def check_fingerprint(self, key):
     '''Prompt the user to see if they have verified this fingerprint.'''
-    cmd = ('%s --no-default-keyring --keyring %s --fingerprint %s'
-           % (self.gpg, self.keyring, key))
+    cmd = ('%s %s --no-default-keyring --keyring %s --fingerprint %s'
+           % (self.gpg, self.gpg_quiet_opts, self.keyring, key))
     # Note we attach stderr to a pipe so it won't print errors to the terminal
     # which it does even if stderr=None
+    debug(cmd)
     gpg = subprocess.Popen(cmd, shell=True, stdin=None, stdout=subprocess.PIPE,
                            stderr=subprocess.PIPE, close_fds=True)
     for line in gpg.stdout.readlines():
@@ -175,14 +247,47 @@ class uids_signer(object):
     if retval != 0:
       print 'WARNING: Keyid %s not valid, skipping.' % key
       return False
-    a = raw_input('Have you verified this user/key? (y/N/q) ')
+
+    ans = raw_input('Have you verified this user/key? (y/N/q) ')
     print
-    if a in ('y', 'Y', 'yes', 'Yes', 'YES'):
-      return True;
-    elif a in ('q', 'Q'):
+    if ans in ('y', 'Y', 'yes', 'Yes', 'YES'):
+      return True
+    elif ans in ('q', 'Q'):
       print 'Dying at user request'
       sys.exit(1)
     return False
+
+  def get_mail_pass(self):
+    '''Prompt the user for their passphrase.'''
+    self.mail_pass = getpass.getpass('Please enter your mail server password: ')
+
+  def verify_mail_pass(self):
+    '''Verify the password we got works for SMTPAUTH.'''
+    smtp = smtplib.SMTP(self.mail_host, self.mail_port)
+    # NOTE WELL: SECURITY IMPORTANT NOTE!
+    # In python 2.6 if you attempt to starttls() and the server doesn't
+    # understand an exception is raised. However before that, it just carried on
+    # and one could attempt to auth over a plain-text session. This is BAD!
+    #
+    # So, in order be secure on older pythons we ehlo() and then check the
+    # response before attempting startls.
+    try:
+      smtp.ehlo()
+      if not smtp.has_extn('STARTTLS'):
+        # Emulate 2.6 behavior
+        raise smtplib.SMTPException('Server does not support STARTTLS')
+      smtp.starttls()
+      # must ehlo after startls
+      smtp.ehlo()
+      smtp.login(self.mail_user, self.mail_pass)
+    except smtplib.SMTPAuthenticationError:
+      return False
+    except smtplib.SMTPException, msg:
+      raise MailSendError, msg
+    finally:
+      smtp.quit()
+
+    return True
 
   def get_passphrase(self):
     '''Prompt the user for their passphrase.'''
@@ -191,19 +296,19 @@ class uids_signer(object):
   def verify_passphrase(self):
     '''Verify a passpharse gotten from get_passpharse().'''
     magic_string = 'test1234'
-    filename = '%s/pius_tmp' % self.tmpdir
-    filename_enc = '%s/pius_tmp.gpg' % self.tmpdir
-    filename_dec = '%s/pius_tmp2' % self.tmpdir
+    filename = self._tmpfile_path('pius_tmp')
+    filename_enc = self._tmpfile_path('pius_tmp.gpg')
+    filename_dec = self._tmpfile_path('pius_tmp2')
     self._clean_files([filename, filename_enc, filename_dec])
     tfile = open(filename, 'w')
     tfile.write(magic_string)
     tfile.close()
-    cmd = ('%s %s --always-trust -r %s -e %s'
+    cmd = ('%s %s --always-trust -r %s -e %s >/dev/null 2>/dev/null'
            % (self.gpg, self.gpg_quiet_opts, self.signer, filename))
     debug(cmd)
     gpg = os.popen(cmd, 'r')
     gpg.close()
-    cmd = ('%s %s %s --output %s -d %s' %
+    cmd = ('%s %s %s --output %s -d %s >/dev/null 2>/dev/null' %
            (self.gpg, self.gpg_quiet_opts, self.gpg_fd_opts, filename_dec,
             filename_enc))
     debug(cmd)
@@ -212,24 +317,27 @@ class uids_signer(object):
                            stderr=subprocess.PIPE,
                            close_fds=True)
 
-    time.sleep(1)
     debug('Sending passphrase')
     gpg.stdin.write('%s\n' % self.passphrase)
-    time.sleep(1)
-    # it doesn't die, even though it should, so we kill it and then call wait()
-    os.kill(gpg.pid, 15)
 
-    debug('Waiting for result')
+    line = gpg.stdout.read()
+    debug('wait()ing on gpg')
     gpg.wait()
+    retval = gpg.returncode
+    if retval != 0:
+      debug('gpg decrypt return code %s' % retval)
+      self._clean_files([filename, filename_enc, filename_dec])
+      return False
+
     if not os.path.exists(filename_dec):
       debug('Resulting file %s not found' % filename_dec)
+      self._clean_files([filename, filename_enc, filename_dec])
       return False
     tfile = open(filename_dec, 'r')
     line = tfile.readline()
     tfile.close()
     self._clean_files([filename, filename_enc, filename_dec])
     if line == magic_string:
-      self.passphrase_confirmed = True
       return True
     debug('File does not contain magic string')
     return False
@@ -252,21 +360,26 @@ class uids_signer(object):
     unique_files = []
     while True:
       line = gpg.stdout.readline().strip()
+
+      # skip the things we don't care about...
       if not line:
         debug('breaking, EOF')
         break
       if line == uids_signer.GPG_PROMPT:
         debug('got to command prompt')
         break
+
+      # Parse the line...
       debug('Got a line %s' % line)
       fields = line.split(':')
+
       if 'uid' != fields[0]:
         continue
 
       status = fields[1]
-      id = fields[9]
+      uid = fields[9]
 
-      debug('Got UID %s with status %s' % (id, status))
+      debug('Got UID %s with status %s' % (uid, status))
 
       # If we can we capture an email address is saved for 
       # emailing off signed keys (not yet implemented), and
@@ -276,22 +389,22 @@ class uids_signer(object):
       # id and blank out the email.
       #
       # For the normal case (have email), we'll be storing each email twice
-      # but that's OK since it means that email is *always* a vlaid email or
+      # but that's OK since it means that email is *always* a valid email or
       # None and id is *always* a valid identifier
-      m = re.search('.* <(.*)>', id)
-      if m:
-        email = m.group(1)
+      match = re.search('.* <(.*)>', uid)
+      if match:
+        email = match.group(1)
         debug('got email %s' % email)
         filename = re.sub('@', '_at_', email)
         filename = '%s__%s' % (key, filename)
-        id = email
+        uid = email
       else:
         # but if it doesn't have an email, do the right thing
         email = None
         debug('no email')
-        id = re.sub(' ', '_', id)
-        id = re.sub('\'', '', id)
-        filename = '%s__%s' % (key, id)
+        uid = re.sub(' ', '_', uid)
+        uid = re.sub('\'', '', uid)
+        filename = '%s__%s' % (key, uid)
 
       if filename in unique_files:
         debug('Filename is a duplicate')
@@ -313,7 +426,7 @@ class uids_signer(object):
       unique_files.append(filename)
       filename += '.asc'
       uids.append({'email': email, 'file': filename, 'status': status,
-                   'id': id})
+                   'id': uid})
 
     debug('quitting')
     # sometimes it wants a save here. I don't know why. We can quit and check
@@ -334,8 +447,9 @@ class uids_signer(object):
   def encrypt_signed_uid(self, key, filename):
     '''Encrypt the file we exported the signed UID to.'''
     (base, ext) = os.path.splitext(filename)
-    path = '%s/%s' % (self.outdir, filename)
-    enc_path = '%s/%s_ENCRYPTED.asc' % (self.outdir, base)
+    path = self._outfile_path(filename)
+    enc_file = '%s_ENCRYPTED%s' % (base, ext)
+    enc_path = self._outfile_path(enc_file)
     if os.path.exists(enc_path):
       os.unlink(enc_path)
     cmd = ('%s %s %s --no-default-keyring --keyring %s --always-trust --armor'
@@ -374,8 +488,23 @@ class uids_signer(object):
         raise EncryptionUnknownError, line
 
     gpg.wait()
-    return enc_path
+    return enc_file
 
+  def _run_and_check_status(self, cmd):
+    '''Helper function for running a gpg call that requires no input
+    but that we want to make sure succeeded.'''
+    debug(cmd)
+    gpg = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE,
+                           stdout=subprocess.PIPE,
+                           stderr=subprocess.PIPE,
+                           close_fds=True)
+    gpg.wait()
+    retval = gpg.returncode
+    if retval != 0:
+      # We don't catch this, but that's fine, if this errors, a stack
+      # trace is what we want
+      raise GpgUnknownError
+    
   def _export_key(self, keyring, key, path):
     '''Internal function used by other export_* functions.'''
     if os.path.exists(path):
@@ -383,13 +512,11 @@ class uids_signer(object):
     cmd = ('%s %s --no-default-keyring --keyring %s --armor'
            ' --output \'%s\' --export %s' % (self.gpg, self.gpg_quiet_opts,
                                          keyring, path, key))
-    debug(cmd)
-    gpg = os.popen(cmd, 'r')
-    gpg.close()
+    self._run_and_check_status(cmd)
 
   def export_signed_uid(self, key, filename):
     '''Export the signed UID form working keyring.'''
-    path = '%s/%s' % (self.outdir, filename)
+    path = self._outfile_path(filename)
     debug('exporting %s' % key)
     self._export_key(self.tmp_keyring, key, path)
 
@@ -398,41 +525,28 @@ class uids_signer(object):
     debug('exporting %s' % key)
     # We have to export our own public key as well
     keys_to_export = '%s %s' % (key, self.signer)
-    path = '%s/%s.asc' % (self.tmpdir, key)
+    path = self._tmpfile_path('%s.asc' % key)
     self._export_key(self.keyring, keys_to_export, path)
 
   def clean_clean_key(self, key):
     '''Delete the "clean" unsigned key which we exported temporarily.'''
-    path = '%s/%s.asc' % (self.tmpdir, key)
+    path = self._tmpfile_path('%s.asc' % key)
     self._clean_files([path])
 
   def import_clean_key(self, key):
     '''Import the clean key we expoerted in export_clean_key() to our temp
     keyring.'''
-    path = '%s/%s.asc' % (self.tmpdir, key)
-    cmd = ('%s %s --no-default-keyring --keyring %s'
-           ' --import %s' % (self.gpg, self.gpg_quiet_opts, self.tmp_keyring,
-                             path))
-    debug(cmd)
-    gpg = os.popen(cmd, 'r')
-    gpg.close()
-
-  def sign_with_interact(self, gpg): 
-    '''Tell the user how to get out of this, and then drop them into the gpg
-    shell.'''
-    print '  Passing you to gpg for passprhase.'
-    print '  Hit ^] after succesfully typing in your passphrase'
-    gpg.interact()
-    # When we return, we have a Command> prompt that w can't
-    # 'expect'... or at least if the user did it right
-    print ''
+    path = self._tmpfile_path('%s.asc' %  key)
+    cmd = ('%s %s --no-default-keyring --keyring %s --import-options'
+           ' import-minimal --import %s' % (self.gpg, self.gpg_quiet_opts,
+                                            self.tmp_keyring, path))
+    self._run_and_check_status(cmd)
 
   #
   # NOTE:
-  #    This currently doesn't work with gpg-agent very seemlessly. If you have
-  #    an agent on, and you DON'T specify -p, it'll work, but you have to hit
-  #    the 'special char' after each sign. If you do use -p, then we never get
-  #    a command-prompt and we get confused. I've yet to make htis work.
+  #    This is a sucky hack. I may just completely delete it one day. The only
+  #    reason it's still here is because agent support is flaky and some people
+  #    may not like us storing their passphrase in memory.
   #
   def sign_uid_expect(self, key, index):
     '''Sign a UID, using the expect stuff. Interactive mode.'''
@@ -457,11 +571,16 @@ class uids_signer(object):
     gpg.expect(re.compile('Really sign.*'))
     debug('Confirming signing')
     gpg.sendline('y')
-    self.sign_with_interact(gpg)
+    # Tell the user how to get out of this, and then drop them into the gpg
+    # shell.
+    print '\n\nPassing you to gpg for passphrase.'
+    print 'Hit ^] after succesfully typing in your passphrase'
+    gpg.interact()
+    # When we return, we have a Command> prompt that w can't
+    # 'expect'... or at least if the user did it right
+    print ''
     # Unselect this UID
     debug('unselecting uid')
-    #gpg.sendline(str(index))
-    #gpg.expect('Command> ')
     debug('Saving key')
     gpg.sendline('save')
     #gpg.close()
@@ -629,20 +748,28 @@ class uids_signer(object):
           uids[index]['enc_file'] = self.encrypt_signed_uid(key,
                                                             uids[index]['file'])
           sys.stdout.write(', encrypted')
-          if self.mail:
-            if uids[index]['email'] == None:
-              print ('  WARNING: No email for %s, cannot send key.'
-                     % uids[index]['id'])
-              continue
-            self.send_mail(uids[index]['email'], key, uids[index]['enc_file'])
-            sys.stdout.write(', mailed')
         except EncryptionKeyError:
           print ('\nEncryption failed due to invalid key error. User may not'
                  ' have an encryption subkey or it may be expired.')
           uids[index]['enc_file'] = None 
-        except MailSendError:
-          print '\nFailed to connect to mail server (%s:%s)' % (self.mail_host,
-                                                                self.mail_port)
+          # If we can't encrypt, we don't want to mail - even if we're using
+          # PGP/Mime the encryption for that will also fail. So we move on to
+          # the next key
+          continue
+
+      # If requested, send keys out. Note this doesn't depend on
+      # encrypt_outfiles, because if we use PGP/Mime, the default, the email
+      # itself is encrypted
+      if self.mail:
+        try:
+          if uids[index]['email'] == None:
+            print ('  WARNING: No email for %s, cannot send key.'
+                   % uids[index]['id'])
+            continue
+          self.send_mail(uids[index]['email'], key, uids[index])
+          sys.stdout.write(', mailed')
+        except MailSendError, msg:
+          print '\nFailed to send mail: %s' % (msg)
 
       # add a newline to all the sys.stdout.write()s
       print ''
@@ -658,46 +785,213 @@ class uids_signer(object):
     print 'Importing keyring...'
     cmd = ('%s %s --import %s' %
            (self.gpg, self.gpg_quiet_opts, self.keyring))
-    gpg = os.popen(cmd, 'r')
-    gpg.close()
+    self._run_and_check_status(cmd)
 
-  def send_mail(self, email, key, filename):
-    '''Send the encrypted uid off to the user.'''
-    # Testing
-    msg = MIMEMultipart.MIMEMultipart()
-    msg['From'] = self.mail
-    if self.override_email:
-      msg['To'] = self.override_email
+  def encrypt_and_sign_file(self, infile, outfile, keyid):
+    '''Encrypt and sign a file.
+
+    Used for PGP/Mime email generation.'''
+    agent = ''
+    if self.mode == MODE_AGENT:
+      agent = '--use-agent'
+    keyring = '--no-default-keyring --keyring %s' % self.tmp_keyring
+    cmd = ('%s %s %s %s %s --always-trust -aes -r %s -r %s --output %s %s' %
+           (self.gpg, self.gpg_quiet_opts, self.gpg_fd_opts, keyring,
+           agent, keyid, self.signer, outfile, infile))
+
+    debug(cmd)
+    gpg = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE,
+                           stdout=subprocess.PIPE,
+                           stderr=subprocess.PIPE,
+                           close_fds=True)
+
+    if self.mode == MODE_AGENT:
+      # For some reason when using agent an initial enter is needed
+      gpg.stdin.write('\n')
     else:
-      msg['To'] = email
-    msg['Date'] = formatdate(localtime=True)
-    msg['Subject'] = 'Your signed PGP key'
+      # For some unidentified reason you must send the passphrase
+      # first, not when it asks for it.
+      debug('Sending passphrase')
+      gpg.stdin.write('%s\n' % self.passphrase)
+
+    while True:
+      debug('Waiting for response')
+      line = gpg.stdout.readline().strip()
+      debug('Got %s' % line)
+      if uids_signer.GPG_ENC_BEG in line:
+        debug('Got GPG_ENC_BEG')
+        continue
+      elif uids_signer.GPG_ENC_END in line:
+        debug('Got GPG_ENC_END')
+        break
+      elif uids_signer.GPG_ENC_INV in line:
+        debug('Got GPG_ENC_INV')
+        raise EncryptionKeyError
+      elif (uids_signer.GPG_KEY_EXP in line or
+            uids_signer.GPG_SIG_EXP in line):
+        # These just mean we passed a given key/sig that's expired, there
+        # may be ones left that are good. We cannot report an error until
+        # we get a ENC_INV.
+        debug('Got GPG_KEY/SIG_EXP')
+        continue
+      elif (uids_signer.GPG_USERID in line or
+            uids_signer.GPG_NEED_PASS in line or
+            uids_signer.GPG_GOOD_PASS in line or
+            uids_signer.GPG_SIG_BEG in line or
+            uids_signer.GPG_SIG_CREATED in line):
+        debug('Got skippable stuff')
+        continue
+      else:
+        raise EncryptionUnknownError, line
+
+    gpg.wait()
+    retval = gpg.returncode
+    if retval != 0:
+      raise EncryptionUnknownError, "Return code was %s" % retval
+
+  def _get_email_body(self, keyid, email):
+    '''Helper function to grab the right email body.'''
+    interpolation_dict = {'keyid': keyid, 'signer': self.signer, 'email': email}
+    if self.mail_text:
+      return open(self.mail_text, 'r').read() % interpolation_dict
+    else:
+      if self.mail_no_pgp_mime:
+        return DEFAULT_NON_MIME_EMAIL_TEXT % interpolation_dict
+      else:
+        return DEFAULT_MIME_EMAIL_TEXT % interpolation_dict
+
+  def _generate_pgp_mime_email(self, email, keyid, filename):
+    '''Generates the PGP/Mime body.
+
+    The message headers MUST be added by the caller.'''
+
+    msg = MIMEMultipart.MIMEMultipart('encrypted', micalg="pgp-sha1",
+        protocol="application/pgp-encrypted")
+    msg.preamble = 'This is an OpenPGP/MIME signed message (RFC 2440 and 3156)'
+
+    # The signed part of the message. This is a MIME encapsulation
+    # of the main body of the message *and* the key.
+    encrypted_body = MIMEMultipart.MIMEMultipart('mixed')
+
+    # First part of signed body
+    textpart = MIMEBase.MIMEBase('text', 'plain', charset="ISO-8859-1")
+    textpart.add_header('Content-Transfer-Encoding', 'quoted-printable')
+    textpart.__delitem__('MIME-Version')
+    textpart.set_payload(self._get_email_body(keyid, email))
+    encrypted_body.attach(textpart)
+
+    # The second part of the signed body
+    filepath = self._outfile_path(filename)
+    attached_sig = MIMEBase.MIMEBase('text', 'plain', name='%s' % filename)
+    attached_sig.add_header('Content-Transfer-Encoding', 'quoted-printable')
+    attached_sig.add_header('Content-Disposition', 'inline',
+                            filename='%s' % filename)
+    attached_sig.__delitem__('MIME-Version')
+    attached_sig.set_payload(open(filepath, 'r').read())
+    encrypted_body.attach(attached_sig)
+
+    encrypted_body.__delitem__('MIME-Version')
+
+    # Encryt/Sign the MIME body.
+    #
+    # We have to conver to DOS newlines since that's what happens
+    # to mail anyway and we don't want verification to fail
+    dos_body = encrypted_body.as_string().replace('\n', '\r\n')
+    tmpfile = self._tmpfile_path('pius_tmp')
+    signed_tmpfile = '%s.asc' % tmpfile
+    self._clean_files([tmpfile, signed_tmpfile])
+    tfile = open(tmpfile, 'w')
+    tfile.write(dos_body)
+    tfile.close()
+    self.encrypt_and_sign_file(tmpfile, signed_tmpfile, keyid)
+
+    # Create the version part of the PGP/Mime encryption
+    pgp_ver = MIMEBase.MIMEBase('application', 'pgp-encrypted')
+    pgp_ver.add_header('Content-Description', 'PGP/MIME version identification')
+    pgp_ver.__delitem__('MIME-Version')
+    pgp_ver.set_payload('Version: 1\n')
+
+    # Create the big sign-encrypted body part
+    pgp_data = MIMEBase.MIMEBase('application', 'octet-stream',
+                                 name='encrypted.asc')
+    pgp_data.add_header('Content-Description', 'OpenPGP encrypted message')
+    pgp_data.add_header('Content-Disposition', 'inline',
+                        filename='encrypted.asc')
+    pgp_data.__delitem__('MIME-Version')
+    pgp_data.set_payload(open(signed_tmpfile, 'r').read())
+
+    # This is the actual encrypt-signed PGP/Mime message
+    msg.attach(pgp_ver)
+    msg.attach(pgp_data)
+
+    self._clean_files([tmpfile, signed_tmpfile])
+    return msg
+
+  def _generate_non_pgp_mime_email(self, email, keyid, filename):
+    '''Send the encrypted uid off to the user.'''
+    msg = MIMEMultipart.MIMEMultipart()
     msg.epilogue = ''
 
-    # Note the line with the email address on it below is intentionally
-    # shorter than the rest to give it space to grow and still be < 80.
-    if self.mail_text:
-      part = MIMEText.MIMEText(open(self.mail_text, 'r').read())
-    else:
-      part = MIMEText.MIMEText(DEFAULT_EMAIL_TEXT % (key, self.signer, email))
+    part = MIMEText.MIMEText(self._get_email_body(keyid, email))
     msg.attach(part)
 
     part = MIMEBase.MIMEBase('application', 'octet-stream')
     part.add_header('Content-Disposition','inline; filename="%s"' %
-                    os.path.basename(filename))
-    part.set_payload(open(filename, 'r').read())
+                    filename)
+    filepath = self._outfile_path(filename)
+    part.set_payload(open(filepath, 'r').read())
     msg.attach(part)
+    return msg
+
+  def send_mail(self, email, keyid, uid_data):
+    '''Send the encrypted uid off to the user.'''
+    if self.mail_no_pgp_mime:
+      msg = self._generate_non_pgp_mime_email(email, keyid,
+                                              uid_data['enc_file'])
+    else:
+      msg = self._generate_pgp_mime_email(email, keyid, uid_data['file'])
+
+    # We don't duplicate the header logic in the sub functions, we
+    # do that here
+    msg['From'] = self.mail
+    if self.mail_override:
+      msg['To'] = self.mail_override
+    else:
+      msg['To'] = email
+    msg['Date'] = formatdate(localtime=True)
+    msg['Subject'] = 'Your signed PGP key'
 
     try:
       smtp = smtplib.SMTP(self.mail_host, self.mail_port)
-      if self.override_email:
-        env_to = self.override_email
+      if self.mail_tls:
+        # NOTE WELL: SECURITY IMPORTANT NOTE!
+        # In python 2.6 if you attempt to starttls() and the server doesn't
+        # understand an exception is raised. However before that, it just
+        # carried on # and one could attempt to auth over a plain-text session.
+        # This is BAD!
+        #
+        # So, in order be secure on older pythons we ehlo() and then check the
+        # response before attempting startls.
+        smtp.ehlo()
+        if not smtp.has_extn('STARTTLS'):
+          # Emulate 2.6 behavior
+          raise smtplib.SMTPException('Server does not support STARTTLS')
+        smtp.starttls()
+        # must re-ehlo after STARTTLS
+        smtp.ehlo()
+        # Don't want to send auth information unless we're TLS'd
+        if self.mail_user:
+          smtp.login(self.mail_user, self.mail_pass)
+      if self.mail_override:
+        env_to = self.mail_override
       else:
         # BCC the user...
         env_to = [email, self.mail]
 
       smtp.sendmail(self.mail, env_to, msg.as_string())
       smtp.quit()
+    except smtplib.SMTPException, msg:
+      raise MailSendError, msg
     except socket.error, msg:
       raise MailSendError, msg
       
@@ -709,27 +1003,32 @@ class uids_signer(object):
 # required argument. This is an ugly hack around that.
 #
 def check_not_another_opt(option, opt, value):
-  m = re.search('^\-', value)
-  if m:
+  '''Ensure argument to an option isn't another option.'''
+  match = re.search('^\-', value)
+  if match:
     raise OptionValueError('Option %s: Value %s looks like another option'
                            ' instead of the required argument' % (opt, value))
   return value
 
 def check_email(option, opt, value):
-  m = re.match('.+@.+\..+', value)
-  if not m:
+  '''Ensure argument seems like an email address.'''
+  match = re.match('.+@.+\..+', value)
+  if not match:
     raise OptionValueError('Option %s: Value %s does not appear like a well'
                            ' formed email address' % (opt, value))
   return value
 
 def check_keyid(option, opt, value):
-  m = re.match('[0-9a-fA-Fx]', value)
-  if not m:
+  '''Ensure argument seems like a keyid.'''
+  match = re.match('[0-9a-fA-Fx]', value)
+  if not match:
     raise OptionValueError('Option %s: Value %s does not appear to be a KeyID'
                            % (opt, value))
   return value
 
+
 class MyOption(Option):
+  '''Our own option class.'''
   TYPES = Option.TYPES + ('not_another_opt', 'email', 'keyid')
   TYPE_CHECKER = copy(Option.TYPE_CHECKER)
   TYPE_CHECKER.update({'not_another_opt': check_not_another_opt,
@@ -739,20 +1038,15 @@ class MyOption(Option):
 
 
 def check_options(parser, options, args):
-  global debug_on
-  if options.print_default_email:
-    print_default_email()
-    sys.exit(0)
+  '''Given the parsed options, sanity check them.'''
+  global DEBUG_ON
 
   if options.debug == True:
     print 'Setting debug'
-    debug_on = True;
+    DEBUG_ON = True
 
   if not options.signer:
     parser.error('You must specify a keyid to sign with.')
-
-  if options.cache_passphrase and options.agent:
-    parser.error('You can only select one of -a or -p')
 
   if options.keyring:
     options.keyring = os.path.expanduser(options.keyring)
@@ -762,33 +1056,53 @@ def check_options(parser, options, args):
   if not options.all_keys:
     if not args:
       parser.error('Keyid required')
-  else:
-    if not options.keyring:
-      parser.error('The -A options requires the -r option')
+  elif not options.keyring:
+    parser.error('The -A options requires the -r option')
 
-  if options.mail and not options.encrypt_outfiles:
-    print 'WARNING: Turning on -e due to -m'
+  if options.mode == MODE_INTERACTIVE:
+    try:
+      global pexpect
+      import pexpect
+    except ImportError:
+      parser.error('You chose interactive mode but do not have the pexpect'
+                   ' module installed.')
+
+  if options.mail and options.mail_no_pgp_mime and not options.encrypt_outfiles:
+    print 'NOTE: -O and -m are present, turning on -e'
     options.encrypt_outfiles = True
+
+  if options.mail_user and not options.mail_tls:
+    print 'NOTE: -u is present, turning on -S.'
+    options.mail_tls = True
 
   if options.mail_text and not options.mail:
     parser.error('ERROR: -M requires -m')
 
+  for mydir in (options.tmp_dir, options.out_dir):
+    if os.path.exists(mydir) and not os.path.isdir(mydir):
+      parser.error('%s exists but isn\'t a directory. It must not exist or be\n'
+                   'a directory.' % mydir)
+    if not os.path.exists(mydir):
+      os.mkdir(mydir, 0700)
 
 def main():
+  """Main."""
   usage = ('%prog [options] -s <signer_keyid> <keyid> [<keyid> ...]\n'
            '       %prog [options] -A -r <keyring_path> -s <signer_keyid>')
   parser = OptionParser(usage=usage, version='%%prog %s' % VERSION,
                         option_class=MyOption)
-  parser.set_defaults(gpg_path=DEFAULT_GPG_PATH,
+  parser.set_defaults(mode=MODE_CACHE_PASSPHRASE,
+                      gpg_path=DEFAULT_GPG_PATH,
                       out_dir=DEFAULT_OUT_DIR,
                       tmp_dir=DEFAULT_TMP_DIR,
                       keyring=DEFAULT_KEYRING,
                       mail_host=DEFAULT_MAIL_HOST,
                       mail_port=DEFAULT_MAIL_PORT,
-                      sign_level='3')
-  parser.add_option('-a', '--use-agent', action='store_true', dest='agent',
+                      sign_level=3)
+  parser.add_option('-a', '--use-agent', action='store_const', const=MODE_AGENT,
+                    dest='mode',
                     help='Use pgp-agent instead of letting gpg prompt the'
-                         ' user for every UID.')
+                         ' user for every UID. [default: false]')
   parser.add_option('-A', '--all-keys', action='store_true', dest='all_keys',
                     help='Sign all keys on the keyring. Requires -r.')
   parser.add_option('-b', '--gpg-path', dest='gpg_path', metavar='PATH',
@@ -799,9 +1113,14 @@ def main():
                     help='Encrypt output files with respective keys.')
   parser.add_option('-d', '--debug', action='store_true', dest='debug',
                     help='Enable debugging output.')
-  parser.add_option('-H', '--mail_host', dest='mail_host', metavar='HOSTNAME',
-                    nargs=1, help='Hostname of SMTP server. [default: %default]')
-  parser.add_option('-i', '--import', action='store_true',
+  parser.add_option('-H', '--mail-host', dest='mail_host', metavar='HOSTNAME',
+                    nargs=1, type='not_another_opt',
+                    help='Hostname of SMTP server. [default: %default]')
+  parser.add_option('-i', '--interactive', action='store_const',
+                    const=MODE_INTERACTIVE, dest='mode', help='Use the pexpect'
+                      ' module for signing and drop to the gpg shell for'
+                      ' entering the passphrase. [default: false]')
+  parser.add_option('-I', '--import', action='store_true',
                     dest='import_keyring',
                     help='Also import the unsigned keys from the keyring'
                          ' into the default keyring. Ignored if -r is not'
@@ -821,19 +1140,22 @@ def main():
                           ' sending out emails instead of the default text.'
                           ' To see the default text use'
                           ' --print-default-email. Requires -m.')
-  parser.add_option('-n', '--override-email', dest='override_email',
+  parser.add_option('-n', '--override-email', dest='mail_override',
                     metavar='EMAIL', nargs=1, type='email',
                     help='Rather than send to the user, send to this address.'
                          ' Mostly useful for debugging.')
   parser.add_option('-o', '--out-dir', dest='out_dir', metavar='OUTDIR',
                     nargs=1, type='not_another_opt',
                     help='Directory to put signed keys in. [default: %default]')
-  parser.add_option('-p', '--cache_passphrase', action='store_true',
-                    dest='cache_passphrase',
+  parser.add_option('-O', '--no-pgp-mime', action='store_true',
+                    dest='mail_no_pgp_mime',
+                    help='Do not use PGP/Mime when sending email.')
+  parser.add_option('-p', '--cache-passphrase', action='store_const',
+                    const=MODE_CACHE_PASSPHRASE, dest='mode',
                     help='Cache private key passphrase in memory and provide'
                          ' it to gpg instead of letting gpg prompt the user'
-                         ' for every UID.')
-  parser.add_option('-P', '--mail_port', dest='mail_port', metavar='PORT',
+                         ' for every UID. [default: true]')
+  parser.add_option('-P', '--mail-port', dest='mail_port', metavar='PORT',
                     nargs=1, type='int',
                     help='Port of SMTP server. [default: %default]')
   parser.add_option('-r', '--keyring', dest='keyring', metavar='KEYRING',
@@ -844,12 +1166,19 @@ def main():
   parser.add_option('-s', '--signer', dest='signer', nargs=1,
                     type='keyid',
                     help='The keyid to sign with (required).')
+  parser.add_option('-S', '--mail-tls', action='store_true', dest='mail_tls',
+                    help='Use STARTTLS when talking to the SMTP server.')
   parser.add_option('-t', '--tmp-dir', dest='tmp_dir', nargs=1,
                     type='not_another_opt',
                     help='Directory to put temporary stuff in. [default:'
                          ' %default]')
   parser.add_option('-T', '--print-default-email', dest='print_default_email',
                     action='store_true', help='Print the default email.')
+  parser.add_option('-u', '--mail-user', dest='mail_user', metavar='USER',
+                    type='not_another_opt', nargs=1,
+                    help='Authenticate to the SMTP server, and use username'
+                         ' USER. You will be prompted for the password. Implies'
+                         ' -S.')
   parser.add_option('-v', '--verbose', dest='verbose', action='store_true',
                     help='Be more verbose.')
 
@@ -857,53 +1186,82 @@ def main():
 
   print 'Welcome to PIUS, the PGP Individual UID Signer.\n'
 
+  # The easy thing first...
+  if options.print_default_email:
+    print_default_email(options.mail_no_pgp_mime)
+    sys.exit(0)
+
+  # Check input to make sure users want sane things
   check_options(parser, options, args)
+
+  # Check to see if the user wants to send email if they didn't specify
+  if not options.mail:
+    ans = raw_input('Would you like to automatically send the signed UIDs to'
+                    ' their owners using\nPGP/Mime encryption as you sign each'
+                    ' one? ')
+    if ans in ('y', 'Y', 'yes', 'YES', 'Yes'):
+      ans = raw_input('What email address should we send from? ')
+      check_email(parser, '-m', ans)
+      options.mail = ans
+      print
  
-  mode = MODE_INTERACTIVE
-  if options.cache_passphrase:
-    mode = MODE_CACHE_PASSPHRASE
-  elif options.agent:
-    mode = MODE_AGENT
-
-  for dir in (options.tmp_dir, options.out_dir):
-    if not os.path.exists(dir):
-      os.mkdir(dir, 0700)
-
-  p = uids_signer(options.signer, mode, options.keyring, options.gpg_path,
-                  options.tmp_dir, options.out_dir, options.encrypt_outfiles,
-                  options.sign_level, options.mail, options.verbose,
-                  options.mail_text, options.override_email, options.mail_host,
-                  options.mail_port)
+  signer = uids_signer(options.signer, options.mode, options.keyring,
+                       options.gpg_path, options.tmp_dir, options.out_dir,
+                       options.encrypt_outfiles, options.sign_level,
+                       options.mail, options.verbose, options.mail_text,
+                       options.mail_override, options.mail_host,
+                       options.mail_port, options.mail_no_pgp_mime,
+                       options.mail_user, options.mail_tls)
 
   if options.all_keys:
-    list = p.get_all_keyids()
+    key_list = signer.get_all_keyids()
+    if len(key_list) == 0:
+      print "Failed to find keys on this keyring\n"
+      sys.exit(1)
     if args:
-      list.extend(args)
+      key_list.extend(args)
   else:
-    list = args
+    key_list = args
 
+  if options.mode == MODE_CACHE_PASSPHRASE:
+    print ('NOTE: See the README about security implications.')
+    while True:
+      signer.get_passphrase()
+      if not signer.verify_passphrase():
+        print 'Sorry, cannot unlock the key with that passphrase, try again.'
+      else:
+        break
+
+  if options.mail_user:
+    while True:
+      signer.get_mail_pass()
+      try:
+        if not signer.verify_mail_pass():
+          print ('Sorry, cannot authenticate to %s as %s with that passwword,'
+                 ' try again.' % (signer.mail_host, signer.mail_user))
+        else:
+          break
+      except MailSendError, msg:
+        print ('There was a problem talking to the mail server (%s): %s'
+               % (signer.mail_host, msg))
+        sys.exit(1)
+
+  # The actual signing
+  for key in key_list:
+    if not signer.check_fingerprint(key):
+      continue
+    print 'Signing all UIDs on key %s' % key
+    signer.sign_all_uids(key)
+
+  # If the user asked, import the keys
   if options.import_keyring:
     if ((not options.keyring) or (options.keyring == DEFAULT_KEYRING)):
       print ('WARNING: Ignoring -i: Either -r wasn\'t specified, or it was'
              ' the same as the default keyring.')
     else:
-      p.import_unsigned_keys()
+      signer.import_unsigned_keys()
 
-  if options.cache_passphrase:
-    print ('WARNING: Using the -p option may have negative security'
-      ' implications!')
-    while not p.passphrase_confirmed:
-      p.get_passphrase()
-      if not p.verify_passphrase():
-        print 'Sorry, cannot unlock the key with that passphrase, try again.'
+  signer.cleanup()
 
-  # The actual signing
-  for key in list:
-    if not p.check_fingerprint(key):
-      continue
-    print 'Signing all UIDs on key %s' % key
-    p.sign_all_uids(key)
-
-  p.cleanup()
-
-main()
+if __name__ == '__main__':
+  main()

@@ -1,10 +1,11 @@
 PIUS: The PGP Individual UID Signer
 
+
 INTRODUCTION
 
 PIUS started life as a group of bad shell scripts I had thrown together through
 the years after going to various PGP keysigning parties. These scripts
-automated various bits and pieces of signing various keys and UIDs, but feel
+automated various bits and pieces of signing various keys and UIDs, but fell
 short of actually making it a mostly painless process.
 
 Finally I decided to sit down and combine all these shell scripts into a single
@@ -18,10 +19,10 @@ of my usual perl, I decided to write this in python.
 The original version heavily used the pexpect module for various reasons: (1) I
 wanted to be able to let the user enter the passphrase directly into gpg for
 security reasons, (2) Using the --{command,passphrase,status}-fd options turned
-not to be not  that well documented and not work the way the documentation
+not to be not that well documented and not work the way the documentation
 suggested.
 
-This method quickly showed itself to be very fragile. So, Imanaged to bend gpg
+This method quickly showed itself to be very fragile. So, I managed to bend gpg
 to my will without using pexpect, and the only thing left that uses pexpect is
 the 'interactive' mode, which will probably one day go away if gpg-agent
 becomes reliable enough.
@@ -29,50 +30,70 @@ becomes reliable enough.
 
 USAGE
 
-The simplest use form is
-  $ pius -e -s <your_keyid> <keyid>
+The simplest (but least useful) use form is
+  $ pius -s <your_keyid> <keyid>
 
 This will sign all UIDs on <keyid>, and export one copy of the for each UID
 with only that UID signed. These keys are exported into a file in /tmp named
 <keyid>__<id>.asc, where id is usually an email address if we can extract one,
-otherwise some other piece of the UID. The '-e' flag is what turns on the
-encryption of the outfiles, and the '-s' flag denotes the "signing" keyid. This
-default mode uses the pexpect mode to drop you into gpg at the right time so
-you can enter your passphrase directly into it. This means in this mode you
-will be prompted once for every UID on every key you sign. This mode will go
-away eventually.
+otherwise some other piece of the UID. The '-s' flag denotes the "signing"
+keyid.
 
-There are two other modes which you can enter by using -p or -a. The -p option
-causes PIUS to prompt for your passpharse at startup and feed it to gpg when
-needed. The passphrase is only stored in memory, but since we don't require
-root (or setuid) we don't lock memory. This may raise security issues if there
-are untrusted individuals on the system (but for single user desktops shouldn't
-be an issue). The -a mode will attempt to use gpg-agent. This is the most
-secure and convenient method, but sometimes gpg-agent can be flaky.
+Note this default mode will prompt for your passphrase and cache it for the life
+of the execution so that it can provide it to GnuPG. There are other options,
+please see the SECURITY IMPLICATIONS section below.
 
 After a keysigning party you probably have a party keyring provided by the
 organizer and want to sign most of the keys on it. In this case, don't specify
-the all the keyids to sign. You probably also want to automatically send off
-emails with the encrypted signatures to all of the UIDs that you verify. In
-that case you want:
-  $ pius -A -e -m <your_email> -r </path/to/keyring.gpg> -s <your_keyid>
+the all the keyids to sign and instead probably want something more like:
+  $ pius -A -r </path/to/keyring.gpg> -m <your_email> -s <your_keyid>
 
 The -r flag specifies a keyring to use, and the -A flag says to sign all keyids
 on that keyring. Since you are prompted to verify each fingerprint, you can say
-no to any people on the ring you were unable to verify. The -e flag says to
-encrypt the exported keyfile and the -m flag says to email it using the
-provided address as the From.
+no to any people on the ring you were unable to verify. The -p flag, as
+previously mentioned, will catch your passphrase. -m will cause pius to email
+out the keys to the respective email addresses from <your_email>.
 
 There are a variety of other options that you may want:
   * customize the tmpdir and outdir directories (-t and -o respectively)
+  * encrypt the outfiles to <filename>_ENCRYPTED.asc (-e)
   * select the signing level (-l)
-  * import the unsigned keys to the default keyring (-i)
+  * import the unsigned keys to the default keyring (-I)
   * verbose mode (-v)
+  * customize mail hostname and port (-H and -P respectively)
+  * customize the email message (-M)
+  * don't use PGP/Mime in the email (-O, implies -e)
+  * specify a SMTPAUTH or STARTTLS for SMTP (-u and -S)
 
 And more! See the '-h' option for more.
 
 
-A NOTE ON SENDING EMAILS
+SECURITY IMPLICATIONS
+
+The default mode for pius, starting in 2.0.0 is 'cache_passphrase' mode. This
+means that pius will ask you for your passphrase at startup, verify this
+passphrase is correct, and then feed it GnuPG everytime it needs it. The
+passphrase is stored in memory and only for the life of the execution of pius.
+For most users this should be relatively safe. However, it is worth noting that
+if you are on a machine whose system administrators you don't trust, there is a
+small danger of them reading this memory while pius is running.
+
+There are two alternatives for people not comfortable with this. The first is to
+use the agent mode. By specifying -a, pius will ask gpg to get the passphrase
+from an gpg-agent. You will need to have your gpg-agent setup and running.
+However, gpg-agent can be rather flaky, so we recommend you pre-seed by doing
+something that requires your private keys so it can cache your keys before you
+run pius.
+
+Finally we have 'interactive mode' which can be entered using -i. This will use
+pexpect to handle most of the signing interactions and then drop you into the
+'gpg --edit-key' shell whenever gpg needs a passphrase. Using this you can enter
+your passphrase directly into gpg. This mode has two main disadvantages. The
+first is that the pexpect code is quite fragile, and the second is that you'll
+have to type your passphrase for every key-UID combination.
+
+
+SENDING EMAILS
 
 When PIUS emails out keys it BCC's you, so you will get a copy of every email
 sent out. If you would like to see what is going to be sent and not have it
@@ -83,8 +104,24 @@ To have PIUS dump the text of the default email body, or you can use the -n
 option to forcefully override the TO in the envelope of the email. When doing
 this *only* the address specified as an argument to -n will get the email.
 
+If you want to see the email sent when not using PGP/Mime then try:
+  $ pius -T -O
+
+If you want to customize this message you can do so with the -M option. Note
+that you may use python's named variable interpolation syntax here to have pius
+fill in email (the email in the UID, i.e. the recipient), keyid (of the key that
+was signed), and signer (the keyid used to sign, i.e. your keyid). For example,
+you can simply include "%(keyid)s" (without the quotes) to get the keyid.
+
+
 LICENSE
 
 PIUS is released under the GNU Public License v2 and is Copyright Phil Dibowitz
 <phil@ipom.com>.
 
+
+Phil Dibowitz
+phil@ipom.com
+
+
+# vim:shiftwidth=2:tabstop=2:expandtab:textwidth=80:softtabstop=2:ai:
