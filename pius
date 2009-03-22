@@ -607,11 +607,12 @@ class uids_signer(object):
     agent = ''
     if self.mode == MODE_AGENT:
       agent = '--use-agent'
+    keyring = '--no-default-keyring --keyring %s' % self.tmp_keyring
     # Note that if passphrase-fd is different from command-fd, nothing works.
-    cmd = ('%s %s %s --no-default-keyring --keyring %s %s'
-           ' --default-cert-level %s --no-ask-cert-level --edit-key %s' %
-           (self.gpg, self.gpg_quiet_opts, self.gpg_fd_opts, self.tmp_keyring,
-            agent, self.sign_level, key))
+    cmd = ('%s %s %s %s -u %s %s --default-cert-level %s --no-ask-cert-level'
+           ' --edit-key %s' %
+           (self.gpg, self.gpg_quiet_opts, self.gpg_fd_opts, keyring,
+            self.signer, agent, self.sign_level, key))
 
     debug(cmd)
     gpg = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE,
@@ -822,9 +823,9 @@ class uids_signer(object):
     if self.mode == MODE_AGENT:
       agent = '--use-agent'
     keyring = '--no-default-keyring --keyring %s' % self.tmp_keyring
-    cmd = ('%s %s %s %s %s --always-trust -aes -r %s -r %s --output %s %s' %
-           (self.gpg, self.gpg_quiet_opts, self.gpg_fd_opts, keyring,
-           agent, keyid, self.signer, outfile, infile))
+    cmd = ('%s %s %s %s %s --always-trust -u %s -aes -r %s -r %s --output %s %s'
+           % (self.gpg, self.gpg_quiet_opts, self.gpg_fd_opts, keyring,
+              agent, self.signer, keyid, self.signer, outfile, infile))
 
     debug(cmd)
     gpg = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE,
