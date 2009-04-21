@@ -931,7 +931,10 @@ class uids_signer(object):
     tfile = open(tmpfile, 'w')
     tfile.write(dos_body)
     tfile.close()
-    self.encrypt_and_sign_file(tmpfile, signed_tmpfile, keyid)
+    try:
+      self.encrypt_and_sign_file(tmpfile, signed_tmpfile, keyid)
+    except EncryptionKeyError:
+      raise EncyptionKeyError
 
     # Create the version part of the PGP/Mime encryption
     pgp_ver = MIMEBase.MIMEBase('application', 'pgp-encrypted')
@@ -973,11 +976,16 @@ class uids_signer(object):
 
   def send_mail(self, email, keyid, uid_data):
     '''Send the encrypted uid off to the user.'''
-    if self.mail_no_pgp_mime:
-      msg = self._generate_non_pgp_mime_email(email, keyid,
-                                              uid_data['enc_file'])
-    else:
-      msg = self._generate_pgp_mime_email(email, keyid, uid_data['file'])
+    try:
+      if self.mail_no_pgp_mime:
+        msg = self._generate_non_pgp_mime_email(email, keyid,
+                                                uid_data['enc_file'])
+      else:
+        msg = self._generate_pgp_mime_email(email, keyid, uid_data['file'])
+    except EncryptionKeyError:
+      msg = ('Failed to generate the email to the user. This is most'
+             ' likely due to the user having no encryption subkey.')
+      raise MailSendError, msg
 
     # We don't duplicate the header logic in the sub functions, we
     # do that here

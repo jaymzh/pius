@@ -8,6 +8,8 @@ phil@ipom.com
 - Specify the key to sign with incase there are two private keys and both of
   them happen to be on the public ring as well. (reported by phil.pennock at
   spodhuis.org)
+- Catch the case when the key we're signing doesn't have an encryption subkey
+  but we're doing PGP/Mime
 
 2.0.1
 Released: 02/28/09
