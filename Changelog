@@ -1,5 +1,5 @@
-CVS
-Released:
+2.0.2
+Released: 04/22/09
 phil@ipom.com
 - Catch the case where a users' public key isn't on the keyring and report it
   to the user instead of just failing (reported by phil.pennock at spodhuis.org)
