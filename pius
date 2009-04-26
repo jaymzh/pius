@@ -33,7 +33,7 @@ import socket
 import subprocess
 import sys
 
-VERSION = '2.0.2'
+VERSION = '2.0.3'
 DEBUG_ON = False
 
 MODE_INTERACTIVE = 0
@@ -934,7 +934,7 @@ class uids_signer(object):
     try:
       self.encrypt_and_sign_file(tmpfile, signed_tmpfile, keyid)
     except EncryptionKeyError:
-      raise EncyptionKeyError
+      raise EncryptionKeyError
 
     # Create the version part of the PGP/Mime encryption
     pgp_ver = MIMEBase.MIMEBase('application', 'pgp-encrypted')
@@ -1288,6 +1288,7 @@ def main():
       continue
     print 'Signing all UIDs on key %s' % key
     signer.sign_all_uids(key)
+    print ''
 
   # If the user asked, import the keys
   if options.import_keyring:
