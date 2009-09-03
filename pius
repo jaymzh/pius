@@ -1236,6 +1236,9 @@ def main():
   except IOError:
     # File doesn't exist or is broken
     pass
+  # Note that by putting this at the end we allow the command line to override
+  # options specified in the config file, BUT if any options conflict, the first
+  # wins, so the config file wins. Meh.
   all_opts.extend(sys.argv[1:])
   (options, args) = parser.parse_args(all_opts)
 
