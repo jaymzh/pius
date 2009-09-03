@@ -120,6 +120,19 @@ PIUS is released under the GNU Public License v2 and is Copyright Phil Dibowitz
 <phil@ipom.com>.
 
 
+CONFIG FILE
+
+You can specify options you'd like to always use in a ~/.pius file. The format
+of this file is option=value. The "=value" part is obviously not required for
+options that don't have a value. An example might be:
+
+  mail=you@sample.com
+  tmp-dir=/home/you/pius/tmp
+
+Pius will except both '=', ':', or whitespace as a separator, and will handle
+extra whitespace around any separator.
+
+
 Phil Dibowitz
 phil@ipom.com
 

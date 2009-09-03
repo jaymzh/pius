@@ -40,7 +40,8 @@ MODE_INTERACTIVE = 0
 MODE_CACHE_PASSPHRASE = 1
 MODE_AGENT = 2
 
-GNUPGHOME = os.environ.get('GNUPGHOME', '~/.gnupg')
+HOME = os.environ.get('HOME')
+GNUPGHOME = os.environ.get('GNUPGHOME', os.path.join(HOME, '.gnupg'))
 DEFAULT_GPG_PATH = '/usr/bin/gpg'
 DEFAULT_KEYRING = os.path.join(GNUPGHOME, 'pubring.gpg')
 DEFAULT_TMP_DIR = '/tmp/pius_tmp'
@@ -1219,7 +1220,24 @@ def main():
   parser.add_option('-v', '--verbose', dest='verbose', action='store_true',
                     help='Be more verbose.')
 
-  (options, args) = parser.parse_args()
+  # Check for extra options in the GnuPG homedirectory.
+  opts_file = os.path.join(HOME, '.pius')
+  all_opts = []
+  sep = re.compile(r'(?:\s*=\s*|\s*:\s*\s+)')
+  try:
+    fp = open(opts_file, 'r')
+    for line in fp:
+      parts = sep.split(line.strip())
+      if not parts[0].startswith('--'):
+        parts[0] = '--%s' % parts[0]
+      if parser.has_option(parts[0]):
+        all_opts.extend(parts)
+    fp.close()
+  except IOError:
+    # File doesn't exist or is broken
+    pass
+  all_opts.extend(sys.argv[1:])
+  (options, args) = parser.parse_args(all_opts)
 
   print 'Welcome to PIUS, the PGP Individual UID Signer.\n'
 
