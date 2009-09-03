@@ -1,3 +1,7 @@
+CVS
+matt@mattb.net.nz
+- Make pius respect the GNUPGHOME environment variable
+
 2.0.2
 Released: 04/22/09
 phil@ipom.com

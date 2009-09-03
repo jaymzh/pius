@@ -40,8 +40,9 @@ MODE_INTERACTIVE = 0
 MODE_CACHE_PASSPHRASE = 1
 MODE_AGENT = 2
 
+GNUPGHOME = os.environ.get('GNUPGHOME', '~/.gnupg')
 DEFAULT_GPG_PATH = '/usr/bin/gpg'
-DEFAULT_KEYRING = '~/.gnupg/pubring.gpg'
+DEFAULT_KEYRING = os.path.join(GNUPGHOME, 'pubring.gpg')
 DEFAULT_TMP_DIR = '/tmp/pius_tmp'
 DEFAULT_OUT_DIR = '/tmp/pius_out'
 DEFAULT_MAIL_HOST = 'localhost'
