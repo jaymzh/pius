@@ -1220,7 +1220,7 @@ def main():
   parser.add_option('-v', '--verbose', dest='verbose', action='store_true',
                     help='Be more verbose.')
 
-  # Check for extra options in the GnuPG homedirectory.
+  # Check for extra options in the ~/.pius file
   opts_file = os.path.join(HOME, '.pius')
   all_opts = []
   sep = re.compile(r'(?:\s*=\s*|\s*:\s*\s+)')
