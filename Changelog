@@ -1,9 +1,15 @@
-CVS
+2.0.4
+Released: 02/13/10
 matt@mattb.net.nz
 - Make pius respect the GNUPGHOME environment variable
 phil@ipom.com
 - Add support for a config file. Based heavily on a patch by matt@mattb.net.nz
 - Fix default GNUPGHOME to use $HOME rather than ~/
+
+2.0.3
+Released: 04/26/09
+- Fix typo in exception name
+- Add newline between keys
 
 2.0.2
 Released: 04/22/09
