@@ -22,6 +22,7 @@ them to the respective emails."""
 from email import MIMEBase
 from email import MIMEMultipart
 from email import MIMEText
+from email import quopriMIME
 from email.Utils import formatdate
 from copy import copy
 from optparse import OptionParser, Option, OptionValueError
@@ -662,9 +663,10 @@ class uids_signer(object):
         # Unfortunately PGP doesn't give us anything parsable in this case. It
         # just gives us another prompt. We give the most likely problem. Best we
         # can do.
-        print ('  ERROR: GnuPG won\'t let us sign, this probably means it can\'t'
-               ' find a secret key, which most likely means that the keyring you'
-               ' are using doesn\'t have _your_ _public_ key on it.')
+        print ('  ERROR: GnuPG won\'t let us sign, this probably means it'
+               ' can\'t find a secret key, which most likely means that the'
+               ' keyring you are using doesn\'t have _your_ _public_ key on'
+               ' it.')
         gpg.stdin.write('quit\n')
         raise NoSelfKeyError
       elif uids_signer.GPG_CONFIRM in line:
@@ -917,7 +919,7 @@ class uids_signer(object):
     attached_sig.add_header('Content-Disposition', 'inline',
                             filename='%s' % filename)
     attached_sig.__delitem__('MIME-Version')
-    attached_sig.set_payload(open(filepath, 'r').read())
+    attached_sig.set_payload(quopriMIME.encode(open(filepath, 'r').read()))
     encrypted_body.attach(attached_sig)
 
     encrypted_body.__delitem__('MIME-Version')
@@ -1166,12 +1168,12 @@ def main():
                          ' keyring.')
   parser.add_option('-l', '--signature-level', dest='sign_level',
                     metavar='LEVEL', nargs=1, type='int',
-                    help='The level to sign keys at (0-3).')
+                    help='The level to sign keys at (0-3). [default: %default]')
   parser.add_option('-m', '--mail', dest='mail', metavar='EMAIL', nargs=1,
                     type='email',
                     help='Email the encrypted, signed keys to the'
                           ' respective email addresses. EMAIL is the address'
-                          ' to send from. Requires local mailserver.')
+                          ' to send from. See also -H and -p.')
   parser.add_option('-M', '--mail-text', dest='mail_text', metavar='FILE',
                     nargs=1, type='not_another_opt',
                     help='Use the text in FILE as the body of email when'
