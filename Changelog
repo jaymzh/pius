@@ -1,3 +1,13 @@
+2.0.5
+Released: 02/27/10
+phil@ipom.com
+- Encode keys for quoted-printable before sending them that way.
+  (closes #2960095)
+- Prompt for a sign-level rather than 'y' or 'n', allowing for different levels
+  per key. (closes #2960103)
+- Remove help text that claimed a local mail server is required for mailing off
+  keys - this hasn't been true for a while (thanks to kcbraunschweig@gmail.com)
+
 2.0.4
 Released: 02/13/10
 matt@mattb.net.nz
