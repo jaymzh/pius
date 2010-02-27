@@ -174,7 +174,7 @@ class uids_signer(object):
   GPG_SIG_CREATED = '[GNUPG:] SIG_CREATED'
 
   def __init__(self, signer, mode, keyring, gpg_path, tmpdir, outdir,
-               encrypt_outfiles, sign_level, mail, verbose, mail_text,
+               encrypt_outfiles, mail, verbose, mail_text,
                mail_override, mail_host, mail_port, mail_no_pgp_mime, mail_user,
                mail_tls):
     self.mode = mode
@@ -184,7 +184,6 @@ class uids_signer(object):
     self.tmpdir = tmpdir
     self.outdir = outdir
     self.encrypt_outfiles = encrypt_outfiles
-    self.sign_level = sign_level
     self.mail = mail
     self.mail_text = mail_text
     self.mail_override = mail_override
@@ -257,10 +256,17 @@ class uids_signer(object):
       print 'WARNING: Keyid %s not valid, skipping.' % key
       return False
 
-    ans = raw_input('Have you verified this user/key? (y/N/q) ')
+    ans = 'y'
+    while ans == 'y':
+      ans = raw_input('\nHave you verified this user/key, and if so, what level'
+                      '\ndo you want to sign at? (0/1/2/3/N/q) [default: N] ')
+      if ans == 'y':
+        print ('\n"Yes" is no longer a valid answer, please specify a level to'
+               ' sign at.')
+          
     print
-    if ans in ('y', 'Y', 'yes', 'Yes', 'YES'):
-      return True
+    if ans in ('0', '1', '2', '3'):
+      return ans
     elif ans in ('q', 'Q'):
       print 'Dying at user request'
       sys.exit(1)
@@ -557,11 +563,11 @@ class uids_signer(object):
   #    reason it's still here is because agent support is flaky and some people
   #    may not like us storing their passphrase in memory.
   #
-  def sign_uid_expect(self, key, index):
+  def sign_uid_expect(self, key, index, level):
     '''Sign a UID, using the expect stuff. Interactive mode.'''
     cmd = ('%s --no-default-keyring --keyring %s --default-cert-level %s'
            ' --no-ask-cert-level --edit-key %s'
-           % (self.gpg, self.tmp_keyring, self.sign_level, key))
+           % (self.gpg, self.tmp_keyring, level, key))
     debug(cmd)
     gpg = pexpect.spawn(cmd)
     gpg.setecho(False)
@@ -603,7 +609,7 @@ class uids_signer(object):
       line = fd.readline().strip()
       debug('got line %s' % line)
 
-  def sign_uid(self, key, index):
+  def sign_uid(self, key, index, level):
     '''Sign a single UID of a key.
     
     This can use either cached passpharse or gpg-agent.'''
@@ -615,7 +621,7 @@ class uids_signer(object):
     cmd = ('%s %s %s %s -u %s %s --default-cert-level %s --no-ask-cert-level'
            ' --edit-key %s' %
            (self.gpg, self.gpg_quiet_opts, self.gpg_fd_opts, keyring,
-            self.signer, agent, self.sign_level, key))
+            self.signer, agent, level, key))
 
     debug(cmd)
     gpg = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE,
@@ -732,7 +738,7 @@ class uids_signer(object):
         if uids[index]['status'] != 'r' and uids[index]['result']:
           print '    %(id)s: %(enc_file)s' % uids[index]
 
-  def sign_all_uids(self, key):
+  def sign_all_uids(self, key, level):
     '''The main function that signs all the UIDs on a given key.'''
     uids = self.get_uids(key)
     print '  There are %s UIDs on this key to sign' % (len(uids) - 1)
@@ -752,7 +758,7 @@ class uids_signer(object):
       # Sign the key...
       if self.mode in (MODE_CACHE_PASSPHRASE, MODE_AGENT):
         try:
-          res = self.sign_uid(key, index)
+          res = self.sign_uid(key, index, level)
         except AgentError:
           print '\ngpg-agent problems, bailing out!'
           sys.exit(1)
@@ -764,7 +770,7 @@ class uids_signer(object):
           # No need to say anything else
           sys.exit(1)
       else:
-        res = self.sign_uid_expect(key, index)
+        res = self.sign_uid_expect(key, index, level)
       if not res:
         uids[index]['result'] = False
         continue
@@ -1137,8 +1143,7 @@ def main():
                       tmp_dir=DEFAULT_TMP_DIR,
                       keyring=DEFAULT_KEYRING,
                       mail_host=DEFAULT_MAIL_HOST,
-                      mail_port=DEFAULT_MAIL_PORT,
-                      sign_level=3)
+                      mail_port=DEFAULT_MAIL_PORT)
   parser.add_option('-a', '--use-agent', action='store_const', const=MODE_AGENT,
                     dest='mode',
                     help='Use pgp-agent instead of letting gpg prompt the'
@@ -1166,9 +1171,6 @@ def main():
                          ' into the default keyring. Ignored if -r is not'
                          ' specified, or if it\'s the same as the default'
                          ' keyring.')
-  parser.add_option('-l', '--signature-level', dest='sign_level',
-                    metavar='LEVEL', nargs=1, type='int',
-                    help='The level to sign keys at (0-3). [default: %default]')
   parser.add_option('-m', '--mail', dest='mail', metavar='EMAIL', nargs=1,
                     type='email',
                     help='Email the encrypted, signed keys to the'
@@ -1267,11 +1269,11 @@ def main():
  
   signer = uids_signer(options.signer, options.mode, options.keyring,
                        options.gpg_path, options.tmp_dir, options.out_dir,
-                       options.encrypt_outfiles, options.sign_level,
-                       options.mail, options.verbose, options.mail_text,
-                       options.mail_override, options.mail_host,
-                       options.mail_port, options.mail_no_pgp_mime,
-                       options.mail_user, options.mail_tls)
+                       options.encrypt_outfiles, options.mail, options.verbose,
+                       options.mail_text, options.mail_override,
+                       options.mail_host, options.mail_port,
+                       options.mail_no_pgp_mime, options.mail_user,
+                       options.mail_tls)
 
   if options.all_keys:
     key_list = signer.get_all_keyids()
@@ -1308,10 +1310,11 @@ def main():
 
   # The actual signing
   for key in key_list:
-    if not signer.check_fingerprint(key):
+    retval = signer.check_fingerprint(key)
+    if retval == False:
       continue
     print 'Signing all UIDs on key %s' % key
-    signer.sign_all_uids(key)
+    signer.sign_all_uids(key, retval)
     print ''
 
   # If the user asked, import the keys
