@@ -34,7 +34,7 @@ import socket
 import subprocess
 import sys
 
-VERSION = '2.0.5'
+VERSION = '2.0.5+CVS'
 DEBUG_ON = False
 
 MODE_INTERACTIVE = 0
@@ -225,16 +225,25 @@ class uids_signer(object):
     debug(cmd)
     gpg = os.popen(cmd, 'r')
     pub_re = re.compile('^pub:')
-    keyids = []
+    key_map = {}
     for line in gpg.readlines():
       if not pub_re.search(line):
         continue
-      uid = line.split(':')[4]
+      lineparts = line.split(':')
+      name = lineparts[9]
+      uid = lineparts[4]
       # get the shirt version
       uid = uid[8:16]
       debug('Got id %s' % uid)
-      keyids.append(uid)
+      key_map[name] = uid
     gpg.close()
+
+    # sort the list
+    keylist = key_map.keys()
+    keylist.sort()
+    keyids = []
+    for name in keylist:
+      keyids.append(key_map[name])
 
     return keyids
 

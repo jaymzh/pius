@@ -1,3 +1,8 @@
+2.0.5+CVS
+Released:
+phil@ipom.com
+- When signing all keys on a keyring, sort them first.
+
 2.0.5
 Released: 02/27/10
 phil@ipom.com
