@@ -239,12 +239,7 @@ class uids_signer(object):
     gpg.close()
 
     # sort the list
-    keylist = key_map.keys()
-    keylist.sort()
-    keyids = []
-    for name in keylist:
-      keyids.append(key_map[name])
-
+    keyids = [ i[1] for i in sorted(key_map.items())]
     return keyids
 
   def check_fingerprint(self, key):
