@@ -34,7 +34,7 @@ import socket
 import subprocess
 import sys
 
-VERSION = '2.0.5+CVS'
+VERSION = '2.0.6'
 DEBUG_ON = False
 
 MODE_INTERACTIVE = 0

@@ -1,5 +1,5 @@
-2.0.5+CVS
-Released:
+2.0.6
+Released: 03/01/10
 phil@ipom.com
 - When signing all keys on a keyring, sort them first.
 - Stop QP-encoding the key, as it prevents people from manually doing
