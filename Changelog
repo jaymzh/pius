@@ -2,6 +2,15 @@
 Released:
 phil@ipom.com
 - When signing all keys on a keyring, sort them first.
+- Stop QP-encoding the key, as it prevents people from manually doing
+    gpg -d <encrypted_file> | gpg --import
+  since the decrypted payload is a MIME message with QP-encoding.  They need to
+  use an intelligent MTA, or mime_dump, and this is confusing some users.  See
+  the note in the code, but since this is armored in encrypted output, it
+  should be safe.
+- QP-encode the body... especially since we claim it's QP
+- Remove the signed, but unencrypted files (potential security hole fixed here)
+- Add a note to the emails that PIUS generated them, for clarity.
 
 2.0.5
 Released: 02/27/10
