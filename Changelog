@@ -11,7 +11,9 @@ phil@ipom.com
 - QP-encode the body... especially since we claim it's QP
 - Remove the signed, but unencrypted files (potential security hole fixed here)
 - Add a note to the emails that PIUS generated them, for clarity.
-- Use application/pgp-keys for the signed key
+- Use application/pgp-keys for the signed key (more RFC complaint and provides
+  Evolution compatibility). Thanks to daniel@gimpelevich.san-francisco.ca.us for
+  point this out.
 
 2.0.5
 Released: 02/27/10
