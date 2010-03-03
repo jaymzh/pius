@@ -820,7 +820,10 @@ class uids_signer(object):
       # add a newline to all the sys.stdout.write()s
       print ''
 
-    os.unlink(self._outfile_path(uids[index]['file']))
+    # remote the signed file, if it exists (it might not, if it's
+    # expired, the user chose not to sign it, etc.)
+    if os.path.exists(self._outfile_path(uids[index]['file'])):
+      os.unlink(self._outfile_path(uids[index]['file']))
 
     if self.verbose:
       self.print_filenames(uids)
