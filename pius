@@ -34,7 +34,7 @@ import socket
 import subprocess
 import sys
 
-VERSION = '2.0.6'
+VERSION = '2.0.6+CVS'
 DEBUG_ON = False
 
 MODE_INTERACTIVE = 0
@@ -1116,6 +1116,9 @@ def check_options(parser, options, args):
   if options.debug == True:
     print 'Setting debug'
     DEBUG_ON = True
+
+  if not os.path.exists(options.gpg_path):
+    parser.error('GnuPG binary not found at %s.' % options.gpg_path)
 
   if not options.signer:
     parser.error('You must specify a keyid to sign with.')
