@@ -1,3 +1,9 @@
+2.0.7
+Released: 03/04/10
+phil@ipom.com
+- Don't attempt to delete things we didn't create. Fixes #2962342.
+- Provide a useful error when we can't find the gpg binary. Fixes #2962341.
+
 2.0.6
 Released: 03/01/10
 phil@ipom.com
