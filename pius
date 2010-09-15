@@ -820,10 +820,13 @@ class uids_signer(object):
       # add a newline to all the sys.stdout.write()s
       print ''
 
-    # remote the signed file, if it exists (it might not, if it's
-    # expired, the user chose not to sign it, etc.)
-    if os.path.exists(self._outfile_path(uids[index]['file'])):
-      os.unlink(self._outfile_path(uids[index]['file']))
+      # remove the signed file, if it exists (it might not, if it's
+      # expired, the user chose not to sign it, etc.)
+      # But don't do this if the ONLY action we're performing is creating those
+      # files - then the desired result is these files.
+      if self.encrypt_outfiles or self.mail:
+        if os.path.exists(self._outfile_path(uids[index]['file'])):
+          os.unlink(self._outfile_path(uids[index]['file']))
 
     if self.verbose:
       self.print_filenames(uids)
