@@ -229,7 +229,7 @@ class uids_signer(object):
     debug(cmd)
     gpg = os.popen(cmd, 'r')
     pub_re = re.compile('^pub:')
-    key_map = {}
+    key_tuples = []
     for line in gpg.readlines():
       if not pub_re.search(line):
         continue
@@ -238,12 +238,12 @@ class uids_signer(object):
       uid = lineparts[4]
       # get the shirt version
       uid = uid[8:16]
-      debug('Got id %s' % uid)
-      key_map[name] = uid
+      debug('Got id %s for %s' % (uid, name))
+      key_tuples.append((name, uid))
     gpg.close()
 
     # sort the list
-    keyids = [ i[1] for i in sorted(key_map.items())]
+    keyids = [ i[1] for i in sorted(key_tuples) ]
     return keyids
 
   def check_fingerprint(self, key):
