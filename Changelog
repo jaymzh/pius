@@ -1,3 +1,12 @@
+2.0.8
+Released: 09/19/10
+phil@ipom.com
+- Don't lose keyids just because the UID string happens to be the same. Fixes
+  #3067127.
+- We need to remove the signed files while we still have the right state to do
+  so. Additionally, don't remove keys if we haven't done anything with them.
+  Fixes #3067157.
+
 2.0.7
 Released: 03/04/10
 phil@ipom.com
