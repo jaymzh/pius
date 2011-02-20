@@ -1207,7 +1207,7 @@ def main():
                     type='email',
                     help='Email the encrypted, signed keys to the'
                           ' respective email addresses. EMAIL is the address'
-                          ' to send from. See also -H and -p.')
+                          ' to send from. See also -H and -P.')
   parser.add_option('-M', '--mail-text', dest='mail_text', metavar='FILE',
                     nargs=1, type='not_another_opt',
                     help='Use the text in FILE as the body of email when'
