@@ -57,7 +57,6 @@ out the keys to the respective email addresses from <your_email>.
 There are a variety of other options that you may want:
   * customize the tmpdir and outdir directories (-t and -o respectively)
   * encrypt the outfiles to <filename>_ENCRYPTED.asc (-e)
-  * select the signing level (-l)
   * import the unsigned keys to the default keyring (-I)
   * verbose mode (-v)
   * customize mail hostname and port (-H and -P respectively)
