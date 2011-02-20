@@ -326,7 +326,7 @@ class uids_signer(object):
     tfile = open(filename, 'w')
     tfile.write(magic_string)
     tfile.close()
-    cmd = ('%s %s --always-trust -r %s -e %s >/dev/null 2>/dev/null'
+    cmd = ('%s %s --no-armor --always-trust -r %s -e %s >/dev/null 2>/dev/null'
            % (self.gpg, self.gpg_quiet_opts, self.signer, filename))
     debug(cmd)
     gpg = os.popen(cmd, 'r')
