@@ -286,7 +286,7 @@ class uids_signer(object):
 
   def verify_mail_pass(self):
     '''Verify the password we got works for SMTPAUTH.'''
-    smtp = smtplib.SMTP(self.mail_host, self.mail_port)
+    smtp = None
     # NOTE WELL: SECURITY IMPORTANT NOTE!
     # In python 2.6 if you attempt to starttls() and the server doesn't
     # understand an exception is raised. However before that, it just carried on
@@ -295,6 +295,7 @@ class uids_signer(object):
     # So, in order be secure on older pythons we ehlo() and then check the
     # response before attempting startls.
     try:
+      smtp = smtplib.SMTP(self.mail_host, self.mail_port)
       smtp.ehlo()
       if not smtp.has_extn('STARTTLS'):
         # Emulate 2.6 behavior
@@ -305,7 +306,7 @@ class uids_signer(object):
       smtp.login(self.mail_user, self.mail_pass)
     except smtplib.SMTPAuthenticationError:
       return False
-    except smtplib.SMTPException, msg:
+    except (smtplib.SMTPException, socket.error), msg:
       raise MailSendError, msg
     finally:
       smtp.quit()
