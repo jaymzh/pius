@@ -225,21 +225,25 @@ class uids_signer(object):
     '''Given a keyring, get all the KeyIDs from it.'''
     debug('extracting all keyids from keyring')
     cmd = ('%s --no-default-keyring --keyring %s --no-options --with-colons'
-           ' --fingerprint 2>&1' % (self.gpg, self.keyring))
+           ' --fingerprint --fixed-list-mode 2>&1' % (self.gpg, self.keyring))
     debug(cmd)
     gpg = os.popen(cmd, 'r')
     pub_re = re.compile('^pub:')
+    uid_re = re.compile('^uid:')
     key_tuples = []
+    name = uid = None
     for line in gpg.readlines():
-      if not pub_re.search(line):
-        continue
-      lineparts = line.split(':')
-      name = lineparts[9]
-      uid = lineparts[4]
-      # get the shirt version
-      uid = uid[8:16]
-      debug('Got id %s for %s' % (uid, name))
-      key_tuples.append((name, uid))
+      if uid and uid_re.match(line):
+        lineparts = line.split(':')
+        name = lineparts[9]
+        debug('Got id %s for %s' % (uid, name))
+        key_tuples.append((name, uid))
+        name = uid = None
+      elif pub_re.match(line):
+        lineparts = line.split(':')
+        uid = lineparts[4]
+        # get the short version
+        uid = uid[8:16]
     gpg.close()
 
     # sort the list
