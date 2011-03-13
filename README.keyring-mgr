@@ -1,0 +1,19 @@
+A new addition to the PIUS suite is the pius-keyring-mgr.
+
+If you host large PGP Keysigning Parties, manually building the keyring can be
+a huge pain. This utility can be pointed at an mbox or CSV file and will find
+keys or fingerprints, attempt to find keys on keyservers, and email users whose
+keys cannot be found.
+
+It is the primary tool I use for managing the SCALE PGP Keysigning party as of
+2011.
+
+It's not as feature-rich as the PIUS signer, but it's saved me loads of time.
+
+Eventually, I'd like to pull some of the similar functionality into a python
+library.
+
+Phil Dibowitz
+phil@ipom.com
+
+# vim:shiftwidth=2:tabstop=2:expandtab:textwidth=80:softtabstop=2:ai:
