@@ -180,10 +180,11 @@ class uids_signer(object):
   def __init__(self, signer, mode, keyring, gpg_path, tmpdir, outdir,
                encrypt_outfiles, mail, verbose, mail_text,
                mail_override, mail_host, mail_port, mail_no_pgp_mime, mail_user,
-               mail_tls):
+               mail_tls, sort_keyring):
     self.mode = mode
     self.signer = signer
     self.keyring = keyring
+    self.sort_keyring = sort_keyring
     self.gpg = gpg_path
     self.tmpdir = tmpdir
     self.outdir = outdir
@@ -245,7 +246,10 @@ class uids_signer(object):
     gpg.close()
 
     # sort the list
-    keyids = [ i[1] for i in sorted(key_tuples) ]
+    if self.sort_keyring:
+      keyids = [ i[1] for i in sorted(key_tuples) ]
+    else:
+      keyids = [ i[1] for i in key_tuples ]
     return keyids
 
   def check_fingerprint(self, key):
@@ -1180,6 +1184,7 @@ def main():
                       out_dir=DEFAULT_OUT_DIR,
                       tmp_dir=DEFAULT_TMP_DIR,
                       keyring=DEFAULT_KEYRING,
+                      sort_keyring=True,
                       mail_host=DEFAULT_MAIL_HOST,
                       mail_port=DEFAULT_MAIL_PORT)
   parser.add_option('-a', '--use-agent', action='store_const', const=MODE_AGENT,
@@ -1220,6 +1225,9 @@ def main():
                           ' sending out emails instead of the default text.'
                           ' To see the default text use'
                           ' --print-default-email. Requires -m.')
+  parser.add_option('-N', '--no-sort-keyring', dest='sort_keyring',
+                    action='store_false',
+                    help='Do not sort the keyring by name.')
   parser.add_option('-n', '--override-email', dest='mail_override',
                     metavar='EMAIL', nargs=1, type='email',
                     help='Rather than send to the user, send to this address.'
@@ -1311,7 +1319,7 @@ def main():
                        options.mail_text, options.mail_override,
                        options.mail_host, options.mail_port,
                        options.mail_no_pgp_mime, options.mail_user,
-                       options.mail_tls)
+                       options.mail_tls, options.sort_keyring)
 
   if options.all_keys:
     key_list = signer.get_all_keyids()
