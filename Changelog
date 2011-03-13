@@ -1,3 +1,19 @@
+2.0.9
+Released: 03/12/11
+phil@ipom.com
+- Provide better error handling for bad mailserver data from users. Thanks to
+  kc@kcbraunschweig.com for the reports and debugging.
+- Provide option to not sort the keyring. Fixes #3182115.
+- Added pius-keyring-mgr, a new utility for managing keyrings, mostly useful
+  for party organizers
+- Added pius-party-worksheet. Previously this was offered on the site, but not as
+  part of this package. Generates party worksheets.
+tomk@gentoo.org
+- Fix passphrase checking for users who have 'armor' in their gpg configs. Fixes
+  #3073359.
+- Fix reading of keyring with GPG >= 2.0.10. Fixes #3073359.
+- Help and README updates. Fixes #3182019 and #3182028)
+
 2.0.8
 Released: 09/19/10
 phil@ipom.com

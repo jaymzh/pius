@@ -2,7 +2,7 @@
 # $Id$
 
 %define name pius
-%define version	2.0.8
+%define version	2.0.9
 %define release 1
 
 Name: %{name}
@@ -26,7 +26,7 @@ rm -rf $RPM_BUILD_ROOT
 %setup
 
 %install
-make install PREFIX=$RPM_BUILD_ROOT/usr
+install PREFIX=$RPM_BUILD_ROOT/usr
 
 %clean
 rm -rf $RPM_BUILD_ROOT
@@ -34,5 +34,7 @@ rm -rf $RPM_BUILD_ROOT
 %files
 %defattr(755, root, bin, 755)
 /usr/bin/%{name}
-%doc README COPYING
+/usr/bin/%{name}-keyring-mgr
+/usr/bin/%{name}-party-worksheet
+%doc README README.keyring-mgr COPYING
 
