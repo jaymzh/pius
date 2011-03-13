@@ -1,0 +1,202 @@
+#!/usr/bin/perl
+
+# vim:expandtab:ai:tabstop=2:textwidth=78:softtabstop=2:shiftwidth=2
+
+use strict;
+use warnings;
+use Getopt::Long;
+
+#
+# Copyright (c) 2008 - present Phil Dibowitz (phil@ipom.com)
+#
+#   This program is free software; you can redistribute it and/or
+#   modify it under the terms of the GNU General Public License as
+#   published by the Free Software Foundation, version 2.
+#
+# Given a PGP Keyring, generate a worksheet for a keysigning party.
+#
+# This is largely based on party-table.pl by
+#   V. Alex Brennen <vab@cryptnet.net> and Gerfried Fuchs <alfie@ist.org>
+# You can find the original at http://www.cryptnet.net/people/vab/
+#
+
+use constant VERSION => '2.0.9';
+
+sub print_html_header
+{
+  my $extra_fields = shift;
+  print "<html>\n<head><title>PGP Keysigning Party Keys</title></head>\n";
+  print "<body>\n<table border=1>\n";
+  print "<tr>\n"
+    . "  <th>Key ID</th>\n  <th>Owner</th>\n  <th>Fingerprint</th>\n"
+    . "  <th>Size</th>\n  <th>Type</th>\n  <th>Key Info Matches?</th>\n"
+    . "  <th>Owner ID Matches?</th>\n";
+  foreach my $field (@$extra_fields) {
+    print "  <th>$field</th>\n";
+  }
+  print "</tr>\n";
+}
+
+sub get_fingerprints
+{
+  my $keyring = shift;
+  my $cmd = 'gpg --fingerprint --no-default-keyring --no-options'
+    . " --with-colons --keyring $keyring | egrep "
+    . '\'^(pub|fpr):\'';
+  my @fps = `$cmd`;
+  return \@fps;
+}
+
+sub parse_fingerprints
+{
+  my $fps = shift;
+  my $key_metadata = {};
+  while (my $line = shift(@{$fps})) {
+    if ($line =~ /^pub/) {
+      my ($pub, $comptrust, $size, $type, $longid, $date, undef,
+          undef, $settrust, $owner, undef, undef, $flags, undef)
+          = split(/:/, $line);
+      my $id = substr($longid, 8);
+      my ($fpr, undef, undef, undef, undef, undef, undef, undef, undef,
+          $fingerprint) = split(/:/, shift(@{$fps}));
+
+      if ($type eq '17') {
+        $type = 'DSA';
+      } elsif ($type eq '20') {
+        $type = 'El Gamal';
+      } elsif ($type eq '1') {
+        $type = 'RSA';
+      }
+
+      if (length($fingerprint) == 40) {
+        for my $i qw(36 32 28 24 20 16 12 8 4) {
+          if ($i != 20) {
+            substr($fingerprint, $i, 0, ' ');
+          }
+          if ($i == 20) {
+            substr($fingerprint, $i, 0, "\n");
+          }
+        }
+      } elsif (length($fingerprint) == 32) {
+        for my $i qw(30 28 26 24 22 20 18 16 14 12 10 8 6 4 2) {
+          if ($i != 16) {
+            substr($fingerprint, $i, 0, ' ');
+          }
+          if ($i == 16) {
+            substr($fingerprint, $i, 0, "\n");
+          }
+        }
+      }
+      $owner =~ s/&/&amp;/;
+      $owner =~ s/</&lt\;/;
+      $owner =~ s/>/&gt\;/;
+  
+      push (@{$key_metadata->{$owner}},
+            {'id' => $id,
+             'owner' => $owner,
+            'fingerprint' => $fingerprint,
+            'size' => $size,
+            'type' => $type});
+    }
+  }
+  return $key_metadata;
+}
+
+sub print_table_body
+{
+  my ($metadata, $num_fields) = @_;
+  # Loop to create extra-fields HTML only once
+  my $extra_fields_html = '';
+  for (my $i = 0; $i < $num_fields; $i++) {
+    $extra_fields_html .= "  <td>&nbsp;</td>\n";
+  }
+  foreach my $user (sort(keys(%{$metadata}))) {
+      foreach my $key (@{$metadata->{$user}}) {
+        print "<tr>\n"
+          . "  <td><pre>$key->{'id'}</pre></td>\n"
+          . "  <td>$key->{'owner'}</td>\n"
+          . "  <td><pre>$key->{'fingerprint'}</pre></td>\n"
+          . "  <td>$key->{'size'}</td>\n"
+          . "  <td>$key->{'type'}</td>\n"
+          . "  <td>&nbsp;</td>\n"
+          . "  <td>&nbsp;</td>\n"
+          . $extra_fields_html
+          . "</tr>\n";
+
+      }
+  }
+}
+
+sub print_html_footer
+{
+  print "</table>\n</body>\n</html>";
+}
+
+sub help
+{
+  my $err = shift || 0;
+
+  # If we're printing this due to incorrect usage, the user is probably
+  # re-directing output to a file, so we need to print to stderr.
+  my $fh = *STDOUT;
+  if ($err) {
+    $fh = *STDERR;
+  }
+    
+  print $fh 'PIUS PGP Keysigning Party Worksheet Generator ' . VERSION . "\n\n";
+  print $fh <<EOF;
+Usage: $0 <options> <keyring> > out-file.html
+
+<keyring> should be the gpg keyring file with the public keys for all party
+participants.
+
+Options:
+  -e, --extra-fields <fields>
+  A comma-separated list of extra colums to have. This is useful if a subset
+  of the participants want to do something extra such as S/MIME for CA Cert
+  verification.
+
+  -h, --help
+  Print this help message and exit.
+
+  -v, --version
+  Print the version and exit.
+
+EOF
+}
+
+my $opts = {};
+GetOptions($opts,
+           'extra-fields|e=s',
+           'help|h',
+           'version|v',
+           ) || die('Bad options');
+
+if (exists($opts->{'help'})) {
+  help();
+  exit(0);
+}
+
+if (exists($opts->{'version'})) {
+  print "$0 " . VERSION . "\n";
+  exit(0);
+}
+
+my $extra_fields = [];
+if (exists($opts->{'extra-fields'})) {
+  @$extra_fields = split(',', $opts->{'extra-fields'});
+}
+
+my $keyring = shift;
+
+unless($keyring) {
+  help(1);
+  exit(1);
+}
+
+my $fps = get_fingerprints($keyring);
+my $metadata = parse_fingerprints($fps);
+print_html_header($extra_fields);
+print_table_body($metadata, scalar(@$extra_fields));
+print_html_footer();
+
