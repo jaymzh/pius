@@ -8,9 +8,10 @@ phil@ipom.com
   for party organizers
 - Added pius-party-worksheet. Previously this was offered on the site, but not as
   part of this package. Generates party worksheets.
-tomk@gentoo.org
+szamcsi@users.sourcforge.net:
 - Fix passphrase checking for users who have 'armor' in their gpg configs. Fixes
   #3073359.
+tomk@gentoo.org
 - Fix reading of keyring with GPG >= 2.0.10. Fixes #3073359.
 - Help and README updates. Fixes #3182019 and #3182028)
 
