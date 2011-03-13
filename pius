@@ -5,7 +5,7 @@ them to the respective emails."""
 # vim:shiftwidth=2:tabstop=2:expandtab:textwidth=80:softtabstop=2:ai:
 
 #
-# Copyright (c) 2008 - 2010 Phil Dibowitz (phil@ipom.com)
+# Copyright (c) 2008 - present Phil Dibowitz (phil@ipom.com)
 #
 #   This program is free software; you can redistribute it and/or
 #   modify it under the terms of the GNU General Public License as
@@ -34,7 +34,7 @@ import socket
 import subprocess
 import sys
 
-VERSION = '2.0.8'
+VERSION = '2.0.9'
 DEBUG_ON = False
 
 MODE_INTERACTIVE = 0
@@ -211,15 +211,15 @@ class uids_signer(object):
     '''Internal function to take a filename and put it in self.tmpdir.'''
     return '%s/%s' % (self.tmpdir, tfile)
 
-  def cleanup(self):
-    '''Cleanup all our temp files.'''
-    self._clean_files([self.tmp_keyring, ('%s~' % self.tmp_keyring)])
-
   def _clean_files(self, flist):
     '''Delete a list of files.'''
     for cfile in flist:
       if os.path.exists(cfile):
         os.unlink(cfile)
+
+  def cleanup(self):
+    '''Cleanup all our temp files.'''
+    self._clean_files([self.tmp_keyring, ('%s~' % self.tmp_keyring)])
 
   def get_all_keyids(self):
     '''Given a keyring, get all the KeyIDs from it.'''
