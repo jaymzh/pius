@@ -229,14 +229,15 @@ class uids_signer(object):
            ' --fingerprint --fixed-list-mode 2>&1' % (self.gpg, self.keyring))
     debug(cmd)
     gpg = os.popen(cmd, 'r')
-    fpr_re = re.compile('^fpr:')
+    # We use 'pub' instead of 'fpr' to support old crufty keys too...
+    pub_re = re.compile('^pub:')
     uid_re = re.compile('^uid:')
     key_tuples = []
     name = keyid = None
     for line in gpg.readlines():
-      if fpr_re.match(line):
+      if pub_re.match(line):
         lineparts = line.split(':')
-        keyid = lineparts[9][32:40]
+        keyid = lineparts[4][8:16]
       elif keyid and uid_re.match(line):
         lineparts = line.split(':')
         name = lineparts[9]
