@@ -23,8 +23,9 @@ import sys
 
 DEBUG_ON = False
 BADKEYS_RE = re.compile('00000000|12345678|no pgp key')
+LIST_SEP_RE = re.compile('\s*,\s*')
 DEFAULT_KEYSERVERS = ['pool.sks-keyservers.net', 'pgp.mit.edu', 'keys.gnupg.net']
-VERSION = '2.0.9'
+VERSION = '2.0.9+CVS'
 
 HOME = os.environ.get('HOME')
 GNUPGHOME = os.environ.get('GNUPGHOME', os.path.join(HOME, '.gnupg'))
@@ -44,14 +45,14 @@ However, I have not been able to find your key. I have tried the following
 keyservers:
 %(keyservers)s
 
-Please upload your key to one of the the aforemention keyservers. You can do
+Please upload your key to one of the aforementioned keyservers. You can do
 this simply with:
 
   gpg --keyserver %(keyserver)s --send-key KEYID
-  
+
 Where 'KEYID' is the keyid of your PGP key. For more information see this site:
   http://www.phildev.net/pgp/
-  
+
 Your key will be searched for again in 24-48 hours and if your key is not there,
 you will receive another email.
 
@@ -81,18 +82,30 @@ def keyid_from_fp(fp):
   '''Given a fingerprint without whitespace, returns keyid.'''
   return fp[32:40]
 
-def parse_csv(filename, sep, name_field, email_field, fp_field):
+def parse_csv(filename, sep, name_field, email_field, fp_field, ignore_emails,
+              ignore_fps):
   '''Parse a CSV for name, email, fingerprint, and generate keyid.'''
   fp_field = fp_field - 1
   name_field = name_field - 1
   email_field = email_field - 1
+
+  ignore_email_list = LIST_SEP_RE.split(ignore_emails)
+  ignore_fp_list = LIST_SEP_RE.split(ignore_fps)
   report = open(filename, 'r')
   keys = []
   for line in report:
+    line = line.strip()
+    # skip empty lines
+    if not line:
+      continue
     parts = line.split(sep)
     if BADKEYS_RE.search(parts[fp_field]):
       continue
     fp = parts[fp_field].replace(' ', '')
+    if (parts[fp_field] in ignore_fp_list
+        or parts[email_field] in ignore_email_list):
+      debug('Ignoring "%s" at user request' % line);
+      continue
     keyid = keyid_from_fp(fp)
     keys.append({'name': parts[name_field],
                  'email': parts[email_field],
@@ -102,7 +115,7 @@ def parse_csv(filename, sep, name_field, email_field, fp_field):
 
 def parse_mbox(filename):
   '''Parse an mbox for name, email, fingerprints and keys.
-  
+
   Note that in the even of a fingerprint, keyid is generated, otherwise
   just the ASCII-armored key is stored.'''
   box = mailbox.mbox(filename)
@@ -204,7 +217,6 @@ class KeyringBuilder(object):
       parts = line.strip().split(' ')
       if parts[1] == 'IMPORTED':
         print 'Importing %s (%s)' % (parts[2][8:16], ' '.join(parts[3:]))
-        takekey = False
 
     gpg.wait()
     retval = gpg.returncode
@@ -247,7 +259,7 @@ Subject: %(party)sPGP Keysignign Party: Can't find your key!''' % interp
     else:
       body = DEFAULT_EMAIL_TEXT % interp
     return hdrs + '\n\n' + body
- 
+
   def _send_email(self, override_email, keyinfo):
 
     body = self._get_email_body(keyinfo)
@@ -265,11 +277,25 @@ Subject: %(party)sPGP Keysignign Party: Can't find your key!''' % interp
   #
   # BEGIN PUBLIC FUNCTIONS
   #
-  def get_key(self, key):
-    '''Try to get key from any keyservers we know about.'''
+  def have_key(self, key):
     basecmd = '%s %s --no-default-keyring --keyring %s' % (self.gpg,
                                                            self.QUIET_OPTS,
                                                            self.keyring)
+    cmd = '%s --fingerprint %s' % (basecmd, key)
+    gpg = subprocess.Popen(cmd, shell=True, stdin=None, close_fds=True,
+                           stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    gpg.wait()
+    retval = gpg.returncode
+    if retval == 0:
+      print 'Already have %s' % key
+      return True
+    return False
+
+  def get_key(self, key):
+    '''Try to get key from any keyservers we know about.'''
+    basecmd = ('%s %s --no-default-keyring --keyring %s --keyserver-options'
+               ' timeout=2' % (self.gpg, self.QUIET_OPTS, self.keyring))
+
     found = False
     for ks in self.keyservers:
       cmd = '%s --keyserver %s --recv-key %s' % (basecmd, ks, key)
@@ -284,7 +310,7 @@ Subject: %(party)sPGP Keysignign Party: Can't find your key!''' % interp
         break
     if not found:
       print 'NOT Found %s' % key
-      
+
     return found
 
   def get_all_keys(self, keys):
@@ -292,10 +318,18 @@ Subject: %(party)sPGP Keysignign Party: Can't find your key!''' % interp
     attempted_keyids = []
     for key in keys:
       if 'keyid' in key:
+        if key['keyid'] == '':
+          print '%s has an old-style key (%s)' % (key['email'],
+                                                  key['fingerprint'])
+          continue
         if key['keyid'] in attempted_keyids:
-          debug('Skipping %s, already processed')
+          debug('Skipping %s, already processed' % key['keyid'])
           continue
         attempted_keyids.append(key['keyid'])
+        # So as not to beat up the keyservers, check if we
+        # already have a key
+        if self.have_key(key['keyid']):
+          continue
         if self.get_key(key['keyid']):
           self.found.append(key)
         else:
@@ -416,6 +450,8 @@ you@company.com
                       fp_field=DEFAULT_CSV_FP_FIELD,
                       gpg_path=DEFAULT_GPG_PATH,
                       party='',
+                      ignore_emails='',
+                      ignore_fps='',
                       tmp_dir=DEFAULT_TMP_DIR)
 
   common = optparse.OptionGroup(parser, 'Options common to all modes')
@@ -473,7 +509,7 @@ could not be found. For completness sake, it can also import keys from a file.
   build.add_option('-p', '--party', dest='party', metavar='NAME', nargs=1,
                    help='The name of the party. This will be printed in the'
                          ' emails sent out. Only useful with -m.')
-  build.add_option('-s', '--keyservers', dest='keyservers', metavar='KEYRING',
+  build.add_option('-s', '--keyservers', dest='keyservers', metavar='KEYSERVER',
                    action='append', help='Keyservers to try. Specify this option'
                    ' once for each server (-s foo -s bar). [default: %s]' %
                    ', '.join(DEFAULT_KEYSERVERS))
@@ -482,6 +518,11 @@ could not be found. For completness sake, it can also import keys from a file.
                         ' %default]')
   build.add_option('-T', '--print-default-email', dest='print_default_email',
                    action='store_true', help='Print the default email.')
+  build.add_option('--ignore-emails', dest='ignore_emails',
+                   help='Comma-separated list of emails to ignore.')
+  build.add_option('--ignore-fingerprints', dest='ignore_fps',
+                   help='Comma-separated list of fingerprints to ignore - no'
+                        ' spaces.')
   parser.add_option_group(build)
 
   prune_intro = '''
@@ -526,7 +567,9 @@ There are no options'''
 
   if options.csv_file:
     keys.extend(parse_csv(options.csv_file, options.delimiter,
-                options.name_field, options.email_field, options.fp_field))
+                          options.name_field, options.email_field,
+                          options.fp_field, options.ignore_emails,
+                          options.ignore_fps))
 
   if not keys:
     print "No keys IDs extract from CSV"
