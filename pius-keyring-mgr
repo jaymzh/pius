@@ -356,24 +356,43 @@ Subject: %(party)sPGP Keysignign Party: Can't find your key!''' % interp
   def _backup_keyring(self):
     return shutil.copy(self.keyring, '%s-pius-backup' % self.keyring)
 
+  # stolen from pius
+  def get_all_keyids(self):
+    '''Given a keyring, get all the KeyIDs from it.'''
+    debug('extracting all keyids from keyring')
+    extra_opts = '%s %s --fixed-list-mode' % (self.QUIET_OPTS, self.AUTO_OPTS)
+    cmd = '%s %s --fingerprint 2>&1' % (self.basecmd, extra_opts)
+    debug(cmd)
+    gpg = os.popen(cmd, 'r')
+    # We use 'pub' instead of 'fpr' to support old crufty keys too...
+    pub_re = re.compile('^pub:')
+    uid_re = re.compile('^uid:')
+    key_tuples = []
+    name = keyid = None
+    for line in gpg.readlines():
+      if pub_re.match(line):
+        lineparts = line.split(':')
+        keyid = lineparts[4][8:16]
+      elif keyid and uid_re.match(line):
+        lineparts = line.split(':')
+        name = lineparts[9]
+        debug('Got id %s for %s' % (keyid, name))
+        key_tuples.append((name, keyid))
+        name = keyid = None
+    gpg.close()
+
+    # sort the list
+    keyids = [ i[1] for i in sorted(key_tuples) ]
+    return keyids
+
   def prune(self):
     self._backup_keyring()
+    keyids = self.get_all_keyids()
+
     extra_opts = '%s %s' % (self.QUIET_OPTS, self.AUTO_OPTS)
-    cmd = '%s %s --fingerprint' % (self.basecmd, extra_opts)
-    debug(cmd)
-    gpg = subprocess.Popen(cmd, shell=True, stdin=None, close_fds=True,
-                           stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-
-    fps = []
-    for line in gpg.stdout:
-      if line.startswith('fpr'):
-        parts = line.split(':')
-        fps.append(parts[9])
-    gpg.wait()
-
     basecmd = '%s --fingerprint' % self.basecmd
-    basedelcmd = '%s %s --delete-key' % (self.basecmd, extra_opts)
-    for fp in fps:
+    basedelcmd = '%s %s --yes --delete-key' % (self.basecmd, extra_opts)
+    for fp in keyids:
       cmd = '%s %s' % (basecmd, fp)
       gpg = os.popen(cmd, 'r')
       for line in gpg:
@@ -384,7 +403,7 @@ Subject: %(party)sPGP Keysignign Party: Can't find your key!''' % interp
       if ans in ('q', 'Q'):
         print 'Dying at user request'
         sys.exit(1)
-      if ans == 'yes':
+      if ans in ('yes', 'y'):
         print "Deleting key ..."
         cmd = '%s %s' % (basedelcmd, fp)
         debug(cmd)
