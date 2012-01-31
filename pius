@@ -473,10 +473,13 @@ class uids_signer(object):
 
     return uids
 
-  def nuke_working_keyring(self):
+  def clean_working_keyring(self):
     '''Delete our temporariy working keyring.'''
     if os.path.exists(self.tmp_keyring):
       os.unlink(self.tmp_keyring)
+    # Some versions of gpg won't create the keyring automatically
+    # thought most seem to... anyway, we touch the file just in case
+    open(self.tmp_keyring, 'w').close()
 
   def encrypt_signed_uid(self, key, filename):
     '''Encrypt the file we exported the signed UID to.'''
@@ -630,7 +633,7 @@ class uids_signer(object):
 
   def sign_uid(self, key, index, level):
     '''Sign a single UID of a key.
-    
+
     This can use either cached passpharse or gpg-agent.'''
     agent = ''
     if self.mode == MODE_AGENT:
@@ -771,7 +774,7 @@ class uids_signer(object):
 
       # Make sure we have a clean keyring, and then import the key we care
       # about
-      self.nuke_working_keyring()
+      self.clean_working_keyring()
       self.import_clean_key(key)
 
       # Sign the key...
