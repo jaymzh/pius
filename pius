@@ -770,6 +770,9 @@ class uids_signer(object):
       if uids[index]['status'] == 'r':
         print '  Skipping revoked uid %s' % index
         continue
+      elif uids[index]['status'] == 'e':
+        print '  Skipping expired uid %s' % index
+        continue
       sys.stdout.write('  UID %s (%s): ' % (index, uids[index]['id']))
 
       # Make sure we have a clean keyring, and then import the key we care
