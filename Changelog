@@ -1,3 +1,21 @@
+2.0.10
+Released:
+phil@ipom.com
+[pius]
+- Changed default email port to submission
+- Changed TLS to default to on
+- Skip expired UIDs
+- Recognized old-style keys (Fixes regression #3286119)
+[pius-keyring-mgr]
+- fix typo/spacing in outgoing emails
+- add ability to ignore certain emails/fps
+- check for a key on the keyring before fetching it from the server
+- ignore old-style keys now that keyservers don't support them anymore
+- prune should print keys in sorted order
+dougb@dougbarton.us
+[pius]
+- Don't expect PGP to create rings for us, since gpg2 doesn't.
+
 2.0.9
 Released: 03/12/11
 phil@ipom.com
