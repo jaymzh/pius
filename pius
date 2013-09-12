@@ -278,7 +278,7 @@ class uids_signer(object):
       if ans == 'y':
         print ('\n"Yes" is no longer a valid answer, please specify a level to'
                ' sign at.')
-          
+
     print
     if ans in ('0', '1', '2', '3'):
       return ans
@@ -832,7 +832,8 @@ class uids_signer(object):
           self.send_mail(uids[index]['email'], key, uids[index])
           sys.stdout.write(', mailed')
         except MailSendError, msg:
-          print '\nFailed to send mail: %s' % (msg)
+          print ('\nThere was a problem talking to the mail server (%s): %s'
+                 % (self.mail_host, msg))
 
       # add a newline to all the sys.stdout.write()s
       print ''
@@ -1086,7 +1087,7 @@ class uids_signer(object):
       raise MailSendError, msg
     except socket.error, msg:
       raise MailSendError, msg
-      
+
 # END class uids_signer
 
 #
@@ -1167,7 +1168,7 @@ def check_options(parser, options, args):
     options.encrypt_outfiles = True
 
   if options.mail_user and not options.mail_tls:
-    print 'NOTE: -u is present, turning on -S.'
+    print 'NOTE: -u is present, turning off -S.'
     options.mail_tls = True
 
   if options.mail_text and not options.mail:
