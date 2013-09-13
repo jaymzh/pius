@@ -474,6 +474,9 @@ class uids_signer(object):
         uid = re.sub(' ', '_', uid)
         uid = re.sub('\'', '', uid)
         filename = '%s__%s' % (key, uid)
+      # Append the UID we're signing with in case people sign with 2
+      # keys in succession:
+      filename = '%s__%s' % (filename, self.signer)
 
       if filename in unique_files:
         debug('Filename is a duplicate')
