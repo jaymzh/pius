@@ -423,9 +423,7 @@ class uids_signer(object):
                            close_fds=True)
 
     gpg.stdin.write('\n')
-    # We want the indexes to start the indexs at 1 (which is what pgp uses)
-    # so we fill the 0th entry.
-    uids = ['empty']
+    uids = []
     unique_files = []
     while True:
       line = gpg.stdout.readline().strip()
@@ -442,11 +440,12 @@ class uids_signer(object):
       debug('Got a line %s' % line)
       fields = line.split(':')
 
-      if 'uid' != fields[0]:
+      if fields[0] != 'uid':
         continue
 
       status = fields[1]
       uid = fields[9]
+      index = int(fields[13].split(',')[0])
 
       debug('Got UID %s with status %s' % (uid, status))
 
@@ -498,7 +497,7 @@ class uids_signer(object):
       unique_files.append(filename)
       filename += '.asc'
       uids.append({'email': email, 'file': filename, 'status': status,
-                   'id': uid})
+                   'id': uid, 'index': index})
 
     debug('quitting')
     # sometimes it wants a save here. I don't know why. We can quit and check
@@ -804,14 +803,14 @@ class uids_signer(object):
     print '  There are %s UIDs on this key to sign' % (len(uids) - 1)
     # From the user key ring make a clean copy
     self.export_clean_key(key)
-    for index in range(1, len(uids)):
-      if uids[index]['status'] == 'r':
-        print '  Skipping revoked uid %s' % index
+    for uid in uids:
+      if uid['status'] == 'r':
+        print '  Skipping revoked uid %s' % uid['index']
         continue
-      elif uids[index]['status'] == 'e':
-        print '  Skipping expired uid %s' % index
+      elif uid['status'] == 'e':
+        print '  Skipping expired uid %s' % uid['index']
         continue
-      sys.stdout.write('  UID %s (%s): ' % (index, uids[index]['id']))
+      sys.stdout.write('  UID %s (%s): ' % (uid['index'], uid['id']))
 
       # Make sure we have a clean keyring, and then import the key we care
       # about
@@ -821,7 +820,7 @@ class uids_signer(object):
       # Sign the key...
       if self.mode in (MODE_CACHE_PASSPHRASE, MODE_AGENT):
         try:
-          res = self.sign_uid(key, index, level)
+          res = self.sign_uid(key, uid['index'], level)
         except AgentError:
           print '\ngpg-agent problems, bailing out!'
           sys.exit(1)
@@ -833,26 +832,25 @@ class uids_signer(object):
           # No need to say anything else
           sys.exit(1)
       else:
-        res = self.sign_uid_expect(key, index, level)
+        res = self.sign_uid_expect(key, uid['index'], level)
       if not res:
-        uids[index]['result'] = False
+        uid['result'] = False
         continue
       sys.stdout.write('signed')
-      uids[index]['result'] = True
+      uid['result'] = True
 
       # Export the signed key...
-      self.export_signed_uid(key, uids[index]['file'])
+      self.export_signed_uid(key, uid['file'])
 
       # If requested, encrypt the signed key...
       if self.encrypt_outfiles:
         try:
-          uids[index]['enc_file'] = self.encrypt_signed_uid(key,
-                                                            uids[index]['file'])
+          uid['enc_file'] = self.encrypt_signed_uid(key, uid['file'])
           sys.stdout.write(', encrypted')
         except EncryptionKeyError:
           print ('\nEncryption failed due to invalid key error. User may not'
                  ' have an encryption subkey or it may be expired.')
-          uids[index]['enc_file'] = None 
+          uid['enc_file'] = None
           # If we can't encrypt, we don't want to mail - even if we're using
           # PGP/Mime the encryption for that will also fail. So we move on to
           # the next key
@@ -863,11 +861,10 @@ class uids_signer(object):
       # itself is encrypted
       if self.mail:
         try:
-          if uids[index]['email'] == None:
-            print ('  WARNING: No email for %s, cannot send key.'
-                   % uids[index]['id'])
+          if uid['email'] == None:
+            print ('  WARNING: No email for %s, cannot send key.' % uid['id'])
             continue
-          self.send_mail(uids[index]['email'], key, uids[index])
+          self.send_mail(uid['email'], key, uid)
           sys.stdout.write(', mailed')
         except MailSendError, msg:
           print ('\nThere was a problem talking to the mail server (%s): %s'
@@ -881,8 +878,8 @@ class uids_signer(object):
       # But don't do this if the ONLY action we're performing is creating those
       # files - then the desired result is these files.
       if self.encrypt_outfiles or self.mail:
-        if os.path.exists(self._outfile_path(uids[index]['file'])):
-          os.unlink(self._outfile_path(uids[index]['file']))
+        if os.path.exists(self._outfile_path(uid['file'])):
+          os.unlink(self._outfile_path(uid['file']))
 
     if self.verbose:
       self.print_filenames(uids)
