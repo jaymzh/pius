@@ -2,7 +2,7 @@
 # $Id$
 
 %define name pius
-%define version	2.0.10
+%define version	2.0.11
 %define release 1
 
 Name: %{name}

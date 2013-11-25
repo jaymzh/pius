@@ -20,7 +20,7 @@ use Getopt::Long;
 # You can find the original at http://www.cryptnet.net/people/vab/
 #
 
-use constant VERSION => '2.0.10';
+use constant VERSION => '2.0.11';
 
 sub print_html_header
 {

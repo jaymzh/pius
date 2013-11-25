@@ -1,3 +1,12 @@
+2.0.11
+Released: 11/24/13
+phil@ipom.com
+[pius]
+- improve various help and error messages
+- add explanations of the cert-levels (closes #5)
+- add signing key to output filename (closes #4)
+- better handling of UID indexes (closes #13)
+
 2.0.10
 Released: 03/29/13
 phil@ipom.com
