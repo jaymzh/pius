@@ -206,7 +206,7 @@ class uids_signer(object):
   def __init__(self, signer, mode, keyring, gpg_path, tmpdir, outdir,
                encrypt_outfiles, mail, verbose, mail_text,
                mail_override, mail_host, mail_port, mail_no_pgp_mime, mail_user,
-               mail_tls, sort_keyring):
+               mail_tls, sort_keyring, policy_url):
     self.mode = mode
     self.signer = signer
     self.keyring = keyring
@@ -229,6 +229,7 @@ class uids_signer(object):
     self.tmp_keyring = '%s/%s' % (self.tmpdir, uids_signer.TMP_KEYRING_FILE)
     self.gpg_quiet_opts = '-q --no-tty --no-auto-check-trustdb --batch'
     self.gpg_fd_opts = '--command-fd 0 --passphrase-fd 0 --status-fd 1'
+    self.policy_url = policy_url
 
   def _outfile_path(self, ofile):
     '''Internal function to take a filename and put it in self.outdir.'''
@@ -616,6 +617,12 @@ class uids_signer(object):
                                             self.tmp_keyring, path))
     self._run_and_check_status(cmd)
 
+  def policy_opts(self):
+    if self.policy_url:
+      return '--cert-policy-url %s' % self.policy_url
+    else:
+      return ''
+
   #
   # NOTE:
   #    This is a sucky hack. I may just completely delete it one day. The only
@@ -625,8 +632,8 @@ class uids_signer(object):
   def sign_uid_expect(self, key, index, level):
     '''Sign a UID, using the expect stuff. Interactive mode.'''
     cmd = ('%s --no-default-keyring --keyring %s --default-cert-level %s'
-           ' --no-ask-cert-level --edit-key %s'
-           % (self.gpg, self.tmp_keyring, level, key))
+           ' --no-ask-cert-level %s --edit-key %s'
+           % (self.gpg, self.tmp_keyring, level, self.policy_opts(), key))
     debug(cmd)
     gpg = pexpect.spawn(cmd)
     gpg.setecho(False)
@@ -678,9 +685,9 @@ class uids_signer(object):
     keyring = '--no-default-keyring --keyring %s' % self.tmp_keyring
     # Note that if passphrase-fd is different from command-fd, nothing works.
     cmd = ('%s %s %s %s -u %s %s --default-cert-level %s --no-ask-cert-level'
-           ' --edit-key %s' %
+           ' %s --edit-key %s' %
            (self.gpg, self.gpg_quiet_opts, self.gpg_fd_opts, keyring,
-            self.signer, agent, level, key))
+            self.signer, agent, level, self.policy_opts(), key))
 
     debug(cmd)
     gpg = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE,
@@ -1312,6 +1319,8 @@ def main():
                     help='Authenticate to the SMTP server, and use username'
                          ' USER. You will be prompted for the password. Implies'
                          ' -S.')
+  parser.add_option('-U', '--policy-url', dest='policy_url',
+                    help='Policy URL to include in each signature')
   parser.add_option('-v', '--verbose', dest='verbose', action='store_true',
                     help='Be more verbose.')
 
@@ -1364,7 +1373,8 @@ def main():
                        options.mail_text, options.mail_override,
                        options.mail_host, options.mail_port,
                        options.mail_no_pgp_mime, options.mail_user,
-                       options.mail_tls, options.sort_keyring)
+                       options.mail_tls, options.sort_keyring,
+                       options.policy_url)
 
   if options.all_keys:
     key_list = signer.get_all_keyids()
