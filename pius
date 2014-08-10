@@ -800,7 +800,9 @@ class uids_signer(object):
   def sign_all_uids(self, key, level):
     '''The main function that signs all the UIDs on a given key.'''
     uids = self.get_uids(key)
-    print '  There are %s UIDs on this key to sign' % (len(uids) - 1)
+    print '  There %s %s UID%s on this key to sign' % (
+          ['is','are'][len(uids)!=1], len(uids), "s"[len(uids)==1:])
+
     # From the user key ring make a clean copy
     self.export_clean_key(key)
     for uid in uids:
