@@ -230,6 +230,7 @@ class uids_signer(object):
     self.gpg_quiet_opts = '-q --no-tty --no-auto-check-trustdb --batch'
     self.gpg_fd_opts = '--command-fd 0 --passphrase-fd 0 --status-fd 1'
     self.policy_url = policy_url
+    self.null = open(os.path.devnull, 'w')
 
   def _outfile_path(self, ofile):
     '''Internal function to take a filename and put it in self.outdir.'''
@@ -287,11 +288,12 @@ class uids_signer(object):
     '''Prompt the user to see if they have verified this fingerprint.'''
     cmd = ('%s %s --no-default-keyring --keyring %s --fingerprint %s'
            % (self.gpg, self.gpg_quiet_opts, self.keyring, key))
-    # Note we attach stderr to a pipe so it won't print errors to the terminal
-    # which it does even if stderr=None
     debug(cmd)
-    gpg = subprocess.Popen(cmd, shell=True, stdin=None, stdout=subprocess.PIPE,
-                           stderr=subprocess.PIPE, close_fds=True)
+    gpg = subprocess.Popen(cmd, shell=True,
+                           stdin=self.null,
+                           stdout=subprocess.PIPE,
+                           stderr=self.null,
+                           close_fds=True)
     output = gpg.stdout.read()
     output = output.strip()
     retval = gpg.wait()
@@ -383,7 +385,7 @@ class uids_signer(object):
     debug(cmd)
     gpg = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE,
                            stdout=subprocess.PIPE,
-                           stderr=subprocess.PIPE,
+                           stderr=self.null,
                            close_fds=True)
 
     debug('Sending passphrase')
@@ -418,7 +420,7 @@ class uids_signer(object):
     debug(cmd)
     gpg = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE,
                            stdout=subprocess.PIPE,
-                           stderr=subprocess.PIPE,
+                           stderr=self.null,
                            close_fds=True)
 
     gpg.stdin.write('\n')
@@ -532,7 +534,7 @@ class uids_signer(object):
     debug(cmd)
     gpg = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE,
                            stdout=subprocess.PIPE,
-                           stderr=subprocess.PIPE,
+                           stderr=self.null,
                            close_fds=True)
 
     # Must send a blank line...
@@ -568,8 +570,8 @@ class uids_signer(object):
     but that we want to make sure succeeded.'''
     debug(cmd)
     gpg = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE,
-                           stdout=subprocess.PIPE,
-                           stderr=subprocess.PIPE,
+                           stdout=self.null,
+                           stderr=self.null,
                            close_fds=True)
     retval = gpg.wait()
     if retval != 0:
@@ -689,7 +691,7 @@ class uids_signer(object):
     debug(cmd)
     gpg = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE,
                            stdout=subprocess.PIPE,
-                           stderr=subprocess.PIPE,
+                           stderr=self.null,
                            close_fds=True)
 
     if self.mode == MODE_AGENT:
@@ -915,7 +917,7 @@ class uids_signer(object):
     debug(cmd)
     gpg = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE,
                            stdout=subprocess.PIPE,
-                           stderr=subprocess.PIPE,
+                           stderr=self.null,
                            close_fds=True)
 
     if self.mode == MODE_AGENT:
