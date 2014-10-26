@@ -961,6 +961,7 @@ class uids_signer(object):
     cmd = [self.gpg] + self.gpg_quiet_opts + self.gpg_fd_opts + agent + [
       '--no-default-keyring',
       '--keyring', self.tmp_keyring,
+      '--no-options',
       '--always-trust',
       '-u', self.signer,
       '-aes',
