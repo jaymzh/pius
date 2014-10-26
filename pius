@@ -1319,8 +1319,7 @@ def main():
   parser.add_option('-u', '--mail-user', dest='mail_user', metavar='USER',
                     type='not_another_opt', nargs=1,
                     help='Authenticate to the SMTP server, and use username'
-                         ' USER. You will be prompted for the password. Implies'
-                         ' -S.')
+                         ' USER. You will be prompted for the password.')
   parser.add_option('-U', '--policy-url', dest='policy_url',
                     help='Policy URL to include in each signature')
   parser.add_option('-v', '--verbose', dest='verbose', action='store_true',
