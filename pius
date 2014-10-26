@@ -294,8 +294,7 @@ class uids_signer(object):
                            stderr=subprocess.PIPE, close_fds=True)
     output = gpg.stdout.read()
     output = output.strip()
-    gpg.wait()
-    retval = gpg.returncode
+    retval = gpg.wait()
     if retval != 0:
       print 'WARNING: Keyid %s not valid, skipping.' % key
       return False
@@ -392,8 +391,7 @@ class uids_signer(object):
 
     line = gpg.stdout.read()
     debug('wait()ing on gpg')
-    gpg.wait()
-    retval = gpg.returncode
+    retval = gpg.wait()
     if retval != 0:
       debug('gpg decrypt return code %s' % retval)
       self._clean_files([filename, filename_enc, filename_dec])
@@ -573,8 +571,7 @@ class uids_signer(object):
                            stdout=subprocess.PIPE,
                            stderr=subprocess.PIPE,
                            close_fds=True)
-    gpg.wait()
-    retval = gpg.returncode
+    retval = gpg.wait()
     if retval != 0:
       # We don't catch this, but that's fine, if this errors, a stack
       # trace is what we want
@@ -960,8 +957,7 @@ class uids_signer(object):
       else:
         raise EncryptionUnknownError, line
 
-    gpg.wait()
-    retval = gpg.returncode
+    retval = gpg.wait()
     if retval != 0:
       raise EncryptionUnknownError, "Return code was %s" % retval
 
