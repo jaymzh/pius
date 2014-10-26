@@ -261,7 +261,7 @@ class uids_signer(object):
     uid_re = re.compile('^uid:')
     key_tuples = []
     name = keyid = None
-    for line in gpg.readlines():
+    for line in gpg.stdout:
       if pub_re.match(line):
         lineparts = line.split(':')
         keyid = lineparts[4][8:16]
