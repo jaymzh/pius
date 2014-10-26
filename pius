@@ -227,8 +227,17 @@ class uids_signer(object):
     self.verbose = verbose
     self.passphrase = ''
     self.tmp_keyring = '%s/%s' % (self.tmpdir, uids_signer.TMP_KEYRING_FILE)
-    self.gpg_quiet_opts = '-q --no-tty --no-auto-check-trustdb --batch'
-    self.gpg_fd_opts = '--command-fd 0 --passphrase-fd 0 --status-fd 1'
+    self.gpg_quiet_opts = [
+      '-q',
+      '--no-tty',
+      '--no-auto-check-trustdb',
+      '--batch',
+    ]
+    self.gpg_fd_opts = [
+      '--command-fd', '0',
+      '--passphrase-fd', '0',
+      '--status-fd', '1',
+    ]
     self.policy_url = policy_url
     self.null = open(os.path.devnull, 'w')
 
@@ -253,10 +262,20 @@ class uids_signer(object):
   def get_all_keyids(self):
     '''Given a keyring, get all the KeyIDs from it.'''
     debug('extracting all keyids from keyring')
-    cmd = ('%s --no-default-keyring --keyring %s --no-options --with-colons'
-           ' --fingerprint --fixed-list-mode 2>&1' % (self.gpg, self.keyring))
+    cmd = [
+      self.gpg,
+      '--no-default-keyring',
+      '--keyring', self.keyring,
+      '--no-options',
+      '--with-colons',
+      '--fingerprint',
+      '--fixed-list-mode',
+    ]
     debug(cmd)
-    gpg = os.popen(cmd, 'r')
+    gpg = subprocess.Popen(cmd,
+        stdin=self.null,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT)
     # We use 'pub' instead of 'fpr' to support old crufty keys too...
     pub_re = re.compile('^pub:')
     uid_re = re.compile('^uid:')
@@ -286,10 +305,13 @@ class uids_signer(object):
 
   def check_fingerprint(self, key):
     '''Prompt the user to see if they have verified this fingerprint.'''
-    cmd = ('%s %s --no-default-keyring --keyring %s --fingerprint %s'
-           % (self.gpg, self.gpg_quiet_opts, self.keyring, key))
+    cmd = [self.gpg] + self.gpg_quiet_opts + [
+      '--no-default-keyring',
+      '--keyring', self.keyring,
+      '--fingerprint', key,
+    ]
     debug(cmd)
-    gpg = subprocess.Popen(cmd, shell=True,
+    gpg = subprocess.Popen(cmd,
                            stdin=self.null,
                            stdout=subprocess.PIPE,
                            stderr=self.null,
@@ -374,16 +396,20 @@ class uids_signer(object):
     tfile = open(filename, 'w')
     tfile.write(magic_string)
     tfile.close()
-    cmd = ('%s %s --no-armor --always-trust -r %s -e %s >/dev/null 2>/dev/null'
-           % (self.gpg, self.gpg_quiet_opts, self.signer, filename))
+    cmd = [self.gpg] + self.gpg_quiet_opts + [
+      '--no-armor',
+      '--always-trust',
+      '-r', self.signer,
+      '-e', filename,
+    ]
     debug(cmd)
-    gpg = os.popen(cmd, 'r')
-    gpg.close()
-    cmd = ('%s %s %s --output %s -d %s >/dev/null 2>/dev/null' %
-           (self.gpg, self.gpg_quiet_opts, self.gpg_fd_opts, filename_dec,
-            filename_enc))
+    subprocess.call(cmd, stdout=self.null, stderr=self.null, close_fds=True)
+    cmd = [self.gpg] + self.gpg_quiet_opts + self.gpg_fd_opts + [
+      '--output', filename_dec,
+      '-d', filename_enc,
+    ]
     debug(cmd)
-    gpg = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE,
+    gpg = subprocess.Popen(cmd, stdin=subprocess.PIPE,
                            stdout=subprocess.PIPE,
                            stderr=self.null,
                            close_fds=True)
@@ -414,11 +440,15 @@ class uids_signer(object):
 
   def get_uids(self, key):
     '''Get all UIDs on a given key.'''
-    cmd = ('%s %s %s --no-default-keyring --keyring %s --no-options'
-           ' --with-colons --edit-key %s' %
-           (self.gpg, self.gpg_quiet_opts, self.gpg_fd_opts, self.keyring, key))
+    cmd = [self.gpg] + self.gpg_quiet_opts + self.gpg_fd_opts + [
+      '--no-default-keyring',
+      '--keyring', self.keyring,
+      '--no-options',
+      '--with-colons',
+      '--edit-key', key,
+    ]
     debug(cmd)
-    gpg = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE,
+    gpg = subprocess.Popen(cmd, stdin=subprocess.PIPE,
                            stdout=subprocess.PIPE,
                            stderr=self.null,
                            close_fds=True)
@@ -527,12 +557,17 @@ class uids_signer(object):
     enc_path = self._outfile_path(enc_file)
     if os.path.exists(enc_path):
       os.unlink(enc_path)
-    cmd = ('%s %s %s --no-default-keyring --keyring %s --always-trust --armor'
-           ' -r %s --output \'%s\' -e \'%s\'' %
-           (self.gpg, self.gpg_quiet_opts, self.gpg_fd_opts, self.tmp_keyring,
-            key, enc_path, path))
+    cmd = [self.gpg] + self.gpg_quiet_opts + self.gpg_fd_opts + [
+      '--no-default-keyring',
+      '--keyring', self.tmp_keyring,
+      '--always-trust',
+      '--armor',
+      '-r', key,
+      '--output', enc_path,
+      '-e', path,
+    ]
     debug(cmd)
-    gpg = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE,
+    gpg = subprocess.Popen(cmd, stdin=subprocess.PIPE,
                            stdout=subprocess.PIPE,
                            stderr=self.null,
                            close_fds=True)
@@ -569,7 +604,7 @@ class uids_signer(object):
     '''Helper function for running a gpg call that requires no input
     but that we want to make sure succeeded.'''
     debug(cmd)
-    gpg = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE,
+    gpg = subprocess.Popen(cmd, stdin=subprocess.PIPE,
                            stdout=self.null,
                            stderr=self.null,
                            close_fds=True)
@@ -579,26 +614,30 @@ class uids_signer(object):
       # trace is what we want
       raise GpgUnknownError
 
-  def _export_key(self, keyring, key, path):
+  def _export_key(self, keyring, keys, path):
     '''Internal function used by other export_* functions.'''
     if os.path.exists(path):
       os.unlink(path)
-    cmd = ('%s %s --no-default-keyring --keyring %s --armor'
-           ' --output \'%s\' --export %s' % (self.gpg, self.gpg_quiet_opts,
-                                         keyring, path, key))
+    cmd = [self.gpg] + self.gpg_quiet_opts + [
+      '--no-default-keyring',
+      '--keyring', keyring,
+      '--armor',
+      '--output', path,
+      '--export',
+    ] + keys
     self._run_and_check_status(cmd)
 
   def export_signed_uid(self, key, filename):
     '''Export the signed UID form working keyring.'''
     path = self._outfile_path(filename)
     debug('exporting %s' % key)
-    self._export_key(self.tmp_keyring, key, path)
+    self._export_key(self.tmp_keyring, [key], path)
 
   def export_clean_key(self, key):
     '''Export clean key from the users' KeyID.'''
     debug('exporting %s' % key)
     # We have to export our own public key as well
-    keys_to_export = '%s %s' % (key, self.signer)
+    keys_to_export = [key, self.signer]
     path = self._tmpfile_path('%s.asc' % key)
     self._export_key(self.keyring, keys_to_export, path)
 
@@ -611,16 +650,19 @@ class uids_signer(object):
     '''Import the clean key we expoerted in export_clean_key() to our temp
     keyring.'''
     path = self._tmpfile_path('%s.asc' %  key)
-    cmd = ('%s %s --no-default-keyring --keyring %s --import-options'
-           ' import-minimal --import %s' % (self.gpg, self.gpg_quiet_opts,
-                                            self.tmp_keyring, path))
+    cmd = [self.gpg] + self.gpg_quiet_opts + [
+      '--no-default-keyring',
+      '--keyring', self.tmp_keyring,
+      '--import-options', 'import-minimal',
+      '--import', path,
+    ]
     self._run_and_check_status(cmd)
 
   def policy_opts(self):
     if self.policy_url:
-      return '--cert-policy-url %s' % self.policy_url
+      return ['--cert-policy-url', self.policy_url]
     else:
-      return ''
+      return []
 
   #
   # NOTE:
@@ -630,11 +672,15 @@ class uids_signer(object):
   #
   def sign_uid_expect(self, key, index, level):
     '''Sign a UID, using the expect stuff. Interactive mode.'''
-    cmd = ('%s --no-default-keyring --keyring %s --default-cert-level %s'
-           ' --no-ask-cert-level %s --edit-key %s'
-           % (self.gpg, self.tmp_keyring, level, self.policy_opts(), key))
+    cmd = [self.gpg] + [
+      '--no-default-keyring',
+      '--keyring', self.tmp_keyring,
+      '--default-cert-level', level,
+      '--no-ask-cert-level',
+      '--edit-key', key,
+    ] + self.policy_opts()
     debug(cmd)
-    gpg = pexpect.spawn(cmd)
+    gpg = pexpect.spawn(' '.join((quote(arg) for arg in cmd)))
     gpg.setecho(False)
     gpg.expect('Command> ')
     debug('Selecting UID')
@@ -678,18 +724,20 @@ class uids_signer(object):
     '''Sign a single UID of a key.
 
     This can use either cached passpharse or gpg-agent.'''
-    agent = ''
+    agent = []
     if self.mode == MODE_AGENT:
-      agent = '--use-agent'
-    keyring = '--no-default-keyring --keyring %s' % self.tmp_keyring
+      agent = ['--use-agent']
+    keyring = ['--no-default-keyring', '--keyring', self.tmp_keyring]
     # Note that if passphrase-fd is different from command-fd, nothing works.
-    cmd = ('%s %s %s %s -u %s %s --default-cert-level %s --no-ask-cert-level'
-           ' %s --edit-key %s' %
-           (self.gpg, self.gpg_quiet_opts, self.gpg_fd_opts, keyring,
-            self.signer, agent, level, self.policy_opts(), key))
-
+    cmd = [self.gpg] + self.gpg_quiet_opts + self.gpg_fd_opts + keyring + [
+      '-u', self.signer,
+    ] + agent + [
+      '--default-cert-level', level,
+      '--no-ask-cert-level',
+      '--edit-key', key,
+    ] + self.policy_opts()
     debug(cmd)
-    gpg = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE,
+    gpg = subprocess.Popen(cmd, stdin=subprocess.PIPE,
                            stdout=subprocess.PIPE,
                            stderr=self.null,
                            close_fds=True)
@@ -898,24 +946,31 @@ class uids_signer(object):
   def import_unsigned_keys(self):
     '''Import all the unsigned keys from keyring to main keyring.'''
     print 'Importing keyring...'
-    cmd = ('%s %s --import %s' %
-           (self.gpg, self.gpg_quiet_opts, self.keyring))
+    cmd = [self.gpg] + self.gpg_quiet_opts + [
+      '--import', self.keyring,
+    ]
     self._run_and_check_status(cmd)
 
   def encrypt_and_sign_file(self, infile, outfile, keyid):
     '''Encrypt and sign a file.
 
     Used for PGP/Mime email generation.'''
-    agent = ''
+    agent = []
     if self.mode == MODE_AGENT:
-      agent = '--use-agent'
-    keyring = '--no-default-keyring --keyring %s' % self.tmp_keyring
-    cmd = ('%s %s %s %s %s --always-trust -u %s -aes -r %s -r %s --output %s %s'
-           % (self.gpg, self.gpg_quiet_opts, self.gpg_fd_opts, keyring,
-              agent, self.signer, keyid, self.signer, outfile, infile))
-
+      agent = ['--use-agent']
+    cmd = [self.gpg] + self.gpg_quiet_opts + self.gpg_fd_opts + agent + [
+      '--no-default-keyring',
+      '--keyring', self.tmp_keyring,
+      '--always-trust',
+      '-u', self.signer,
+      '-aes',
+      '-r', keyid,
+      '-r', self.signer,
+      '--output', outfile,
+      infile,
+    ]
     debug(cmd)
-    gpg = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE,
+    gpg = subprocess.Popen(cmd, stdin=subprocess.PIPE,
                            stdout=subprocess.PIPE,
                            stderr=self.null,
                            close_fds=True)
@@ -1201,6 +1256,8 @@ def check_options(parser, options, args):
     try:
       global pexpect
       import pexpect
+      global quote
+      from pipes import quote
     except ImportError:
       parser.error('You chose interactive mode but do not have the pexpect'
                    ' module installed.')
