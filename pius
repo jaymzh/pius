@@ -671,7 +671,7 @@ class uids_signer(object):
     '''Look for a specific string on the status-fd.'''
     line = ''
     while line not in (string,):
-      debug('Waiting for line')
+      debug('Waiting for line %s' % string)
       line = fd.readline().strip()
       debug('got line %s' % line)
 
