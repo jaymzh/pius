@@ -831,6 +831,9 @@ class uids_signer(object):
           raise PassphraseError
       if 'GOOD_PASSPHRASE' in line:
         break
+      if uids_signer.GPG_PROMPT in line:
+        print '  ERROR: GPG didn\'t sign.'
+        raise GpgUnknownError(line)
 
     debug('Saving key')
     self.gpg_wait_for_string(gpg.stdout, uids_signer.GPG_PROMPT)
