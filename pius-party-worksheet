@@ -69,7 +69,7 @@ sub parse_fingerprints
       }
 
       if (length($fingerprint) == 40) {
-        for my $i qw(36 32 28 24 20 16 12 8 4) {
+        for my $i (qw(36 32 28 24 20 16 12 8 4)) {
           if ($i != 20) {
             substr($fingerprint, $i, 0, ' ');
           }
@@ -78,7 +78,7 @@ sub parse_fingerprints
           }
         }
       } elsif (length($fingerprint) == 32) {
-        for my $i qw(30 28 26 24 22 20 18 16 14 12 10 8 6 4 2) {
+        for my $i (qw(30 28 26 24 22 20 18 16 14 12 10 8 6 4 2)) {
           if ($i != 16) {
             substr($fingerprint, $i, 0, ' ');
           }
