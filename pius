@@ -51,6 +51,7 @@ DEFAULT_MAIL_HOST = 'localhost'
 DEFAULT_MAIL_PORT = 587
 PIUS_HOME = os.path.join(HOME, '.pius')
 PIUS_RC = os.path.join(PIUS_HOME, 'piusrc')
+PIUS_SIGNED_KEYS = os.path.join(PIUS_HOME, 'signed_keys')
 
 # Note the line with the email address on it below is intentionally
 # shorter than the rest to give it space to grow and still be < 80.
@@ -856,6 +857,7 @@ class uids_signer(object):
 
   def sign_all_uids(self, key, level):
     '''The main function that signs all the UIDs on a given key.'''
+    signed_any_uids = False
     uids = self.get_uids(key)
     print '  There %s %s UID%s on this key to sign' % (
           ['is','are'][len(uids)!=1], len(uids), "s"[len(uids)==1:])
@@ -898,6 +900,7 @@ class uids_signer(object):
         continue
       sys.stdout.write('signed')
       uid['result'] = True
+      signed_any_uids = True
 
       # Export the signed key...
       self.export_signed_uid(key, uid['file'])
@@ -946,6 +949,7 @@ class uids_signer(object):
 
     # Remove the clean keyfile we temporarily created
     self.clean_clean_key(key)
+    return signed_any_uids
 
   def import_unsigned_keys(self):
     '''Import all the unsigned keys from keyring to main keyring.'''
@@ -1324,6 +1328,18 @@ def parse_dotfile(parser):
 
   return opts
 
+def store_signed_keys(signed_keys):
+  biglist = []
+  if os.path.exists(PIUS_SIGNED_KEYS):
+    fp = open(PIUS_SIGNED_KEYS, 'r')
+    biglist = fp.read(fp).splitlines()
+    fp.close()
+  biglist.extend(signed_keys)
+  uniqlist = set(biglist)
+  fp = open(PIUS_SIGNED_KEYS, 'w')
+  fp.write("\n".join(uniqlist))
+  fp.close()
+
 def main():
   """Main."""
   usage = ('%prog [options] -s <signer_keyid> <keyid> [<keyid> ...]\n'
@@ -1497,12 +1513,14 @@ def main():
         sys.exit(1)
 
   # The actual signing
+  signed_keys = {}
   for key in key_list:
     retval = signer.check_fingerprint(key)
     if retval == False:
       continue
     print 'Signing all UIDs on key %s' % key
-    signer.sign_all_uids(key, retval)
+    if signer.sign_all_uids(key, retval):
+      signed_keys[key] = True
     print ''
 
   # If the user asked, import the keys
@@ -1514,6 +1532,7 @@ def main():
       signer.import_unsigned_keys()
 
   signer.cleanup()
+  store_signed_keys(signed_keys)
 
 if __name__ == '__main__':
   main()
