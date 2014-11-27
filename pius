@@ -291,7 +291,6 @@ class uids_signer(object):
         debug('Got id %s for %s' % (keyid, name))
         key_tuples.append((name, keyid))
         name = keyid = None
-    gpg.close()
 
     # sort the list
     if self.sort_keyring:
@@ -709,7 +708,6 @@ class uids_signer(object):
     debug('unselecting uid')
     debug('Saving key')
     gpg.sendline('save')
-    #gpg.close()
     return True
 
   def gpg_wait_for_string(self, fd, string):
