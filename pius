@@ -49,6 +49,8 @@ DEFAULT_TMP_DIR = '/tmp/pius_tmp'
 DEFAULT_OUT_DIR = '/tmp/pius_out'
 DEFAULT_MAIL_HOST = 'localhost'
 DEFAULT_MAIL_PORT = 587
+PIUS_HOME = os.path.join(HOME, '.pius')
+PIUS_RC = os.path.join(PIUS_HOME, 'piusrc')
 
 # Note the line with the email address on it below is intentionally
 # shorter than the rest to give it space to grow and still be < 80.
@@ -886,6 +888,7 @@ class uids_signer(object):
                  ' I\'m bailing out!')
           sys.exit(1)
         except NoSelfKeyError:
+          print('\nWe don\'t have our own key, according to GnuPG.')
           # No need to say anything else
           sys.exit(1)
       else:
@@ -1282,6 +1285,45 @@ def check_options(parser, options, args):
     if not os.path.exists(mydir):
       os.mkdir(mydir, 0700)
 
+def parse_dotfile(parser):
+  tmp_file = PIUS_HOME + 'rc'
+  sep = re.compile(r'(?:\s*=\s*|\s*:\s*\s+)')
+
+  # Handle conversion of old rc file
+  if os.path.isfile(PIUS_HOME):
+    print 'Converting ~/.pius to ~/.pius/piusrc'
+    # temporarily rename ~/.pius to ~/.piusrc
+    os.rename(PIUS_HOME, tmp_file)
+    os.mkdir(PIUS_HOME, 0755)
+    os.rename(tmp_file, PIUS_RC)
+  # Handle partial conversion
+  elif os.path.isfile(tmp_file) and not os.path.islink(tmp_file):
+    if not os.path.isdir(PIUS_HOME):
+      os.mkdir(PIUS_HOME, 0755)
+    if not os.path.isfile(PIUS_RC):
+      os.rename(tmp_file, PIUS_RC)
+    else:
+      print 'WARNING: Both %s and %s exist... ignoring %s' % (PIUS_RC, tmp_file)
+
+  # if we have a config file, parse it
+  opts = []
+  if os.path.isfile(PIUS_RC):
+    fp = open(PIUS_RC, 'r')
+    for line in fp:
+      if line.startswith('#'):
+        continue
+      parts = sep.split(line.strip())
+      if not parts[0].startswith('--'):
+        parts[0] = '--%s' % parts[0]
+      if parser.has_option(parts[0]):
+        opts.extend(parts)
+      else:
+        print('WARNING: Invalid line "%s" in %s, ignoring.' %
+              (line.strip(), PIUS_RC))
+    fp.close()
+
+  return opts
+
 def main():
   """Main."""
   usage = ('%prog [options] -s <signer_keyid> <keyid> [<keyid> ...]\n'
@@ -1383,21 +1425,8 @@ def main():
                     help='Be more verbose.')
 
   # Check for extra options in the ~/.pius file
-  opts_file = os.path.join(HOME, '.pius')
   all_opts = []
-  sep = re.compile(r'(?:\s*=\s*|\s*:\s*\s+)')
-  try:
-    fp = open(opts_file, 'r')
-    for line in fp:
-      parts = sep.split(line.strip())
-      if not parts[0].startswith('--'):
-        parts[0] = '--%s' % parts[0]
-      if parser.has_option(parts[0]):
-        all_opts.extend(parts)
-    fp.close()
-  except IOError:
-    # File doesn't exist or is broken
-    pass
+  all_opts = parse_dotfile(parser)
   # Note that by putting this at the end we allow the command line to override
   # options specified in the config file, BUT if any options conflict, the first
   # wins, so the config file wins. Meh.
