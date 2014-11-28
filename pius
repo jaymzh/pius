@@ -21,6 +21,7 @@ them to the respective emails."""
 
 from libpius import signer as psigner
 from libpius import mailer as pmailer
+from libpius.signstate import SignState
 from libpius.constants import *
 from libpius.exceptions import *
 from libpius import util
@@ -160,18 +161,6 @@ def parse_dotfile(parser):
     fp.close()
 
   return opts
-
-def store_signed_keys(signed_keys):
-  biglist = []
-  if os.path.exists(PIUS_SIGNED_KEYS):
-    fp = open(PIUS_SIGNED_KEYS, 'r')
-    biglist = fp.read().splitlines()
-    fp.close()
-  biglist.extend(signed_keys)
-  uniqlist = set(biglist)
-  fp = open(PIUS_SIGNED_KEYS, 'w')
-  fp.write("\n".join(uniqlist))
-  fp.close()
 
 def main():
   """Main."""
@@ -386,7 +375,7 @@ def main():
       signer.import_unsigned_keys()
 
   signer.cleanup()
-  store_signed_keys(signed_keys)
+  SignState.store_signed_keys(dict((x, 'SIGNED') for x in signed_keys))
 
 if __name__ == '__main__':
   main()
