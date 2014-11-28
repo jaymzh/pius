@@ -165,7 +165,7 @@ def store_signed_keys(signed_keys):
   biglist = []
   if os.path.exists(PIUS_SIGNED_KEYS):
     fp = open(PIUS_SIGNED_KEYS, 'r')
-    biglist = fp.read(fp).splitlines()
+    biglist = fp.read().splitlines()
     fp.close()
   biglist.extend(signed_keys)
   uniqlist = set(biglist)
