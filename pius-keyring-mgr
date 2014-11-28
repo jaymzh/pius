@@ -273,7 +273,6 @@ Subject: %(party)sPGP Keysignign Party: Can't find your key!''' % interp
     return hdrs + '\n\n' + body
 
   def _send_email(self, override_email, keyinfo):
-
     body = self._get_email_body(keyinfo)
     efrom = self.fromaddr
     eto = [keyinfo['email'], self.fromaddr]

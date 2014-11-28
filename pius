@@ -25,10 +25,8 @@ from libpius.state import SignState
 from libpius.constants import *
 from libpius.exceptions import *
 from libpius import util
-from copy import copy
-from optparse import OptionParser, Option, OptionValueError
+from optparse import OptionParser
 import os
-import re
 import sys
 
 def print_default_email(no_mime):
@@ -41,44 +39,6 @@ def print_default_email(no_mime):
   else:
     print DEFAULT_NON_MIME_EMAIL_TEXT % interpolation_dict
 
-#
-# Stupid fucking optparse will assume "-m -e" means "-e is the email address
-# being passed to -m"... instead of "oh, -e is an option, -m is missing it's
-# required argument. This is an ugly hack around that.
-#
-def check_not_another_opt(_, opt, value):
-  '''Ensure argument to an option isn't another option.'''
-  match = re.search(r'^\-', value)
-  if match:
-    raise OptionValueError('Option %s: Value %s looks like another option'
-                           ' instead of the required argument' % (opt, value))
-  return value
-
-def check_email(_, opt, value):
-  '''Ensure argument seems like an email address.'''
-  match = re.match(r'.+@.+\..+', value)
-  if not match:
-    raise OptionValueError('Option %s: Value %s does not appear like a well'
-                           ' formed email address' % (opt, value))
-  return value
-
-def check_keyid(_, opt, value):
-  '''Ensure argument seems like a keyid.'''
-  match = re.match(r'[0-9a-fA-Fx]', value)
-  if not match:
-    raise OptionValueError('Option %s: Value %s does not appear to be a KeyID'
-                           % (opt, value))
-  return value
-
-
-class MyOption(Option):
-  '''Our own option class.'''
-  TYPES = Option.TYPES + ('not_another_opt', 'email', 'keyid')
-  TYPE_CHECKER = copy(Option.TYPE_CHECKER)
-  TYPE_CHECKER.update({'not_another_opt': check_not_another_opt,
-                       'email': check_email,
-                       'keyid': check_keyid})
-# END Stupid python optparse hack.
 
 
 def check_options(parser, options, args):
@@ -123,46 +83,6 @@ def check_options(parser, options, args):
     if not os.path.exists(mydir):
       os.mkdir(mydir, 0700)
 
-def parse_dotfile(parser):
-  tmp_file = PIUS_HOME + 'rc'
-  sep = re.compile(r'(?:\s*=\s*|\s*:\s*\s+)')
-
-  # Handle conversion of old rc file
-  if os.path.isfile(PIUS_HOME):
-    print 'Converting ~/.pius to ~/.pius/piusrc'
-    # temporarily rename ~/.pius to ~/.piusrc
-    os.rename(PIUS_HOME, tmp_file)
-    os.mkdir(PIUS_HOME, 0755)
-    os.rename(tmp_file, PIUS_RC)
-  # Handle partial conversion
-  elif os.path.isfile(tmp_file) and not os.path.islink(tmp_file):
-    if not os.path.isdir(PIUS_HOME):
-      os.mkdir(PIUS_HOME, 0755)
-    if not os.path.isfile(PIUS_RC):
-      os.rename(tmp_file, PIUS_RC)
-    else:
-      print ('WARNING: Both %s and %s exist... ignoring %s' %
-             (PIUS_RC, tmp_file, tmp_file))
-
-  # if we have a config file, parse it
-  opts = []
-  if os.path.isfile(PIUS_RC):
-    fp = open(PIUS_RC, 'r')
-    for line in fp:
-      if line.startswith('#'):
-        continue
-      parts = sep.split(line.strip())
-      if not parts[0].startswith('--'):
-        parts[0] = '--%s' % parts[0]
-      if parser.has_option(parts[0]):
-        opts.extend(parts)
-      else:
-        print('WARNING: Invalid line "%s" in %s, ignoring.' %
-              (line.strip(), PIUS_RC))
-    fp.close()
-
-  return opts
-
 def warn_if_short_keyids(ids):
   for keyid in ids:
     if len(keyid) == 8:
@@ -180,7 +100,7 @@ def main():
   usage = ('%prog [options] -s <signer_keyid> <keyid> [<keyid> ...]\n'
            '       %prog [options] -A -r <keyring_path> -s <signer_keyid>')
   parser = OptionParser(usage=usage, version='%%prog %s' % VERSION,
-                        option_class=MyOption)
+                        option_class=util.MyOption)
   parser.set_defaults(mode=MODE_CACHE_PASSPHRASE,
                       gpg_path=DEFAULT_GPG_PATH,
                       out_dir=DEFAULT_OUT_DIR,
@@ -278,7 +198,7 @@ def main():
 
   # Check for extra options in the ~/.pius file
   all_opts = []
-  all_opts = parse_dotfile(parser)
+  all_opts = util.parse_dotfile(parser)
   # Note that by putting this at the end we allow the command line to override
   # options specified in the config file, BUT if any options conflict, the first
   # wins, so the config file wins. Meh.
@@ -302,7 +222,7 @@ def main():
                     ' one? ')
     if ans in ('y', 'Y', 'yes', 'YES', 'Yes'):
       ans = raw_input('What email address should we send from? ')
-      check_email(parser, '-m', ans)
+      util.check_email(parser, '-m', ans)
       options.mail = ans
       print
 
@@ -391,7 +311,7 @@ def main():
       signer.import_unsigned_keys()
 
   signer.cleanup()
-  SignState.store_signed_keys(dict((x, 'SIGNED') for x in signed_keys))
+  SignState.store_signed_keys(dict((x, SignState.kSIGNED) for x in signed_keys))
 
 if __name__ == '__main__':
   main()

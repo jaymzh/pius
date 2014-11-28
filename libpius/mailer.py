@@ -1,6 +1,9 @@
+# vim:shiftwidth=2:tabstop=2:expandtab:textwidth=80:softtabstop=2:ai:
+
 from libpius.exceptions import *
 from libpius.constants import *
-from libpius.util import clean_files
+from libpius.util import clean_files, debug
+from email import message
 from email import MIMEBase
 from email import MIMEMultipart
 from email import MIMEText
@@ -24,9 +27,39 @@ class PiusMailer(object):
     self.message_text = msg_text
     self.tmp_dir = tmp_dir
 
+  @staticmethod
+  def add_options(parser):
+    parser.add_option('-u', '--mail-user', dest='mail_user', metavar='USER',
+                      type='not_another_opt', nargs=1,
+                      help='Authenticate to the SMTP server, and use username'
+                           ' USER. You will be prompted for the password.')
+    parser.add_option('-S', '--no-mail-tls', action='store_false',
+                      dest='mail_tls',
+                      help='Do not use STARTTLS when talking to the SMTP'
+                           ' server.')
+    parser.add_option('-P', '--mail-port', dest='mail_port', metavar='PORT',
+                      nargs=1, type='int',
+                      help='Port of SMTP server. [default: %default]')
+    parser.add_option('-O', '--no-pgp-mime', action='store_true',
+                      dest='mail_no_pgp_mime',
+                      help='Do not use PGP/Mime when sending email.')
+    parser.add_option('-n', '--override-email', dest='mail_override',
+                      metavar='EMAIL', nargs=1, type='email',
+                      help='Rather than send to the user, send to this address.'
+                           ' Mostly useful for debugging.')
+    parser.add_option('-M', '--mail-text', dest='mail_text', metavar='FILE',
+                      nargs=1, type='not_another_opt',
+                      help='Use the text in FILE as the body of email when'
+                           ' sending out emails instead of the default text.'
+                           ' To see the default text use'
+                           ' --print-default-email. Requires -m.')
+    parser.add_option('-H', '--mail-host', dest='mail_host', metavar='HOSTNAME',
+                      nargs=1, type='not_another_opt',
+                      help='Hostname of SMTP server. [default: %default]')
+
   def pgp_mime(self):
-      '''Accessor'''
-      return not self.no_pgp_mime
+    '''Accessor'''
+    return not self.no_pgp_mime
 
   def get_pass(self):
     '''Prompt the user for their passphrase.'''
@@ -37,7 +70,7 @@ class PiusMailer(object):
     try:
       smtp = smtplib.SMTP(self.host, self.port)
     except socket.error, msg:
-      raise MailSendError, msg
+      raise MailSendError(msg)
 
     # NOTE WELL: SECURITY IMPORTANT NOTE!
     # In python 2.6 if you attempt to starttls() and the server doesn't
@@ -58,7 +91,7 @@ class PiusMailer(object):
     except smtplib.SMTPAuthenticationError:
       return False
     except (smtplib.SMTPException, socket.error), msg:
-      raise MailSendError, msg
+      raise MailSendError(msg)
     finally:
       smtp.quit()
 
@@ -68,7 +101,7 @@ class PiusMailer(object):
     '''Helper function to grab the right email body.'''
     interpolation_dict = {'keyid': keyid, 'signer': signer, 'email': email}
     if self.message_text:
-      return open(message_text, 'r').read() % interpolation_dict
+      return open(self.message_text, 'r').read() % interpolation_dict
     else:
       if self.no_pgp_mime:
         return DEFAULT_NON_MIME_EMAIL_TEXT % interpolation_dict
@@ -80,8 +113,9 @@ class PiusMailer(object):
 
     The message headers MUST be added by the caller.'''
 
-    msg = MIMEMultipart.MIMEMultipart('encrypted', micalg="pgp-sha1",
-        protocol="application/pgp-encrypted")
+    msg = MIMEMultipart.MIMEMultipart(
+        'encrypted', micalg="pgp-sha1", protocol="application/pgp-encrypted"
+    )
     msg.preamble = 'This is an OpenPGP/MIME signed message (RFC 2440 and 3156)'
 
     # The signed part of the message. This is a MIME encapsulation
@@ -170,13 +204,13 @@ class PiusMailer(object):
     msg.attach(part)
 
     part = MIMEBase.MIMEBase('application', 'octet-stream')
-    part.add_header('Content-Disposition','inline; filename="%s"' %
+    part.add_header('Content-Disposition', 'inline; filename="%s"' %
                     os.path.basename(filename))
     part.set_payload(open(filename, 'r').read())
     msg.attach(part)
     return msg
 
-  def send_mail(self, signer, keyid, uid_data, psign):
+  def send_sig_mail(self, signer, keyid, uid_data, psign):
     '''Send the encrypted uid off to the user.'''
     try:
       if self.no_pgp_mime:
@@ -190,17 +224,30 @@ class PiusMailer(object):
     except EncryptionKeyError:
       msg = ('Failed to generate the email to the user. This is most'
              ' likely due to the user having no encryption subkey.')
-      raise MailSendError, msg
+      raise MailSendError(msg)
 
+    msg['Subject'] = 'Your signed PGP key'
+    self._send_mail(uid_data['email'], msg)
+
+  def send_mail(self, to, subject, body):
+    '''Wrapper around _send_mail() which generates a Message object that it
+       expects.'''
+    msg = message.Message()
+    msg.set_payload(body)
+    msg['Subject'] = subject
+    self._send_mail(to, msg)
+
+  def _send_mail(self, to, msg):
+    '''Given a to and Message object, send email.'''
     # We don't duplicate the header logic in the sub functions, we
     # do that here
+    debug("send_mail called with to (%s), subject (%s)" % (to, msg['subject']))
     msg['From'] = self.mail
     if self.address_override:
       msg['To'] = self.address_override
     else:
-      msg['To'] = uid_data['email']
+      msg['To'] = to
     msg['Date'] = formatdate(localtime=True)
-    msg['Subject'] = 'Your signed PGP key'
 
     try:
       smtp = smtplib.SMTP(self.host, self.port)
@@ -231,9 +278,7 @@ class PiusMailer(object):
 
       smtp.sendmail(self.mail, env_to, msg.as_string())
       smtp.quit()
-    except smtplib.SMTPException, msg:
-      raise MailSendError, msg
-    except socket.error, msg:
-      raise MailSendError, msg
-
-
+    except smtplib.SMTPException, emsg:
+      raise MailSendError(emsg)
+    except socket.error, emsg:
+      raise MailSendError(emsg)

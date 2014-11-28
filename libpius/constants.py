@@ -1,3 +1,5 @@
+# vim:shiftwidth=2:tabstop=2:expandtab:textwidth=80:softtabstop=2:ai:
+
 import os
 
 VERSION = '2.1.1'
@@ -14,7 +16,6 @@ DEFAULT_MAIL_HOST = 'localhost'
 DEFAULT_MAIL_PORT = 587
 PIUS_HOME = os.path.join(HOME, '.pius')
 PIUS_RC = os.path.join(PIUS_HOME, 'piusrc')
-PIUS_SIGNED_KEYS = os.path.join(PIUS_HOME, 'signed_keys')
 
 # Note the line with the email address on it below is intentionally
 # shorter than the rest to give it space to grow and still be < 80.
