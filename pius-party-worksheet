@@ -56,7 +56,6 @@ sub parse_fingerprints
       my ($pub, $comptrust, $size, $type, $longid, $date, undef,
           undef, $settrust, $owner, undef, undef, $flags, undef)
           = split(/:/, $line);
-      my $id = substr($longid, 8);
       my ($fpr, undef, undef, undef, undef, undef, undef, undef, undef,
           $fingerprint) = split(/:/, shift(@{$fps}));
 
@@ -92,7 +91,7 @@ sub parse_fingerprints
       $owner =~ s/>/&gt\;/;
   
       push (@{$key_metadata->{$owner}},
-            {'id' => $id,
+            {'id' => $longid,
              'owner' => $owner,
             'fingerprint' => $fingerprint,
             'size' => $size,
