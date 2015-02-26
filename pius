@@ -21,7 +21,7 @@ them to the respective emails."""
 
 from libpius import signer as psigner
 from libpius import mailer as pmailer
-from libpius.signstate import SignState
+from libpius.state import SignState
 from libpius.constants import *
 from libpius.exceptions import *
 from libpius import util

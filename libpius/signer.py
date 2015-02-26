@@ -750,7 +750,7 @@ class PiusSigner(object):
   def import_unsigned_keys(self):
     '''Import all the unsigned keys from keyring to main keyring.'''
     print 'Importing keyring...'
-    cmd = [self.gpg] + self.gpg_base_otps + self.gpg_quiet_opts + [
+    cmd = [self.gpg] + self.gpg_base_opts + self.gpg_quiet_opts + [
       '--import', self.keyring,
     ]
     self._run_and_check_status(cmd)
