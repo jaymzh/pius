@@ -162,6 +162,18 @@ def parse_dotfile(parser):
 
   return opts
 
+def warn_if_short_keyids(ids):
+  for keyid in ids:
+    if len(keyid) == 8:
+      print('WARNING: You passed in short keyids. Short keyids are forgable'
+            ' and should be avoided.')
+      ans = raw_input('Type "I understand" to continue: ')
+      if ans == 'I understand':
+        return
+      else:
+        print 'ERROR: Danger not acknowledged, exiting.'
+        sys.exit(1)
+
 def main():
   """Main."""
   usage = ('%prog [options] -s <signer_keyid> <keyid> [<keyid> ...]\n'
@@ -325,15 +337,16 @@ def main():
   if options.all_keys:
     key_list = signer.get_all_keyids()
     if len(key_list) == 0:
-      print "Failed to find keys on this keyring\n"
+      print "ERROR: Failed to find keys on this keyring\n"
       sys.exit(1)
     if args:
       key_list.extend(args)
   else:
+    warn_if_short_keyids(args)
     key_list = args
 
   if options.mode == MODE_CACHE_PASSPHRASE:
-    print ('NOTE: See the README about security implications.')
+    print 'NOTE: See the README about security implications.'
     while True:
       signer.get_passphrase()
       if not signer.verify_passphrase():
