@@ -1,4 +1,14 @@
+INSTALLATION
+
 Installation is easy:
 
-./setup.py build
-sudo ./setup.py install
+  ./setup.py build
+  sudo ./setup.py install
+
+This will install the modules into the site-specific place your python expects modules to go (usually something like /usr/local/lib/python2.7/dist-packages/libpius) and install the pius binary in /usr/local/bin.
+
+RUNNING FROM SOURCE DIR
+
+You can run pius (and friends) directly from the source directory if you'd like, and it'll do the right thing. Just specify the relative or full path, ala:
+
+  ./pius
