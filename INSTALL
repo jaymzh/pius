@@ -1,0 +1,4 @@
+Installation is easy:
+
+./setup.py build
+sudo ./setup.py install
