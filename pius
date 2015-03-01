@@ -101,7 +101,7 @@ def check_options(parser, options, args):
 
   if not options.all_keys:
     if not args:
-      parser.error('Keyid required')
+      parser.error('Keyid (or -A) required')
   elif not options.keyring:
     parser.error('The -A options requires the -r option')
 
