@@ -21,11 +21,12 @@ import smtplib
 import subprocess
 import sys
 
+from libpius.constants import VERSION
+
 DEBUG_ON = False
 BADKEYS_RE = re.compile('00000000|12345678|no pgp key')
 LIST_SEP_RE = re.compile('\s*,\s*')
 DEFAULT_KEYSERVERS = ['pool.sks-keyservers.net', 'pgp.mit.edu', 'keys.gnupg.net']
-VERSION = '2.1.0'
 
 HOME = os.environ.get('HOME')
 GNUPGHOME = os.environ.get('GNUPGHOME', os.path.join(HOME, '.gnupg'))

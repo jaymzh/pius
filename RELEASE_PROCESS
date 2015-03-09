@@ -1,0 +1,25 @@
+0. Bump version
+  vi libpius/constants.py pius-party-worksheet pius.spec
+
+1. Add appropriate CHANGELOG entries.
+
+2. Commit
+
+3. Tag a release
+  version="2.1.0"
+  git tag -a v$version -m "PIUS version $version"
+  git push origin --tags
+
+4. Make a tarball
+  git archive --format=tar --prefix=pius-$version/ v$version \
+    > /tmp/pius-$version-prep.tar
+  cd /tmp && tar xf pius-$version-prep.tar
+  cd /tmp/pius-$version
+  # poke around
+  cd ..
+  tar jcf pius-$version.tar.bz2 pius-$version
+
+5. Sign
+  gpg -ab /tmp/pius-$version.tar.bz2
+
+6. Upload
