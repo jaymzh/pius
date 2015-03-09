@@ -1,7 +1,29 @@
 2.1
-Released:
+Released: 03/09/15
+phil@ipom.com
 [pius]
 - significant refactor into modules
+- move to only using long keyids - short keyids are no longer safe
+- fix interactive signing
+- use .pius/piusrc instead of .pius
+- fix various warnings/errors
+- add tracking of signatures
+git@cad.cx
+[pius-party-worksheet]
+- Fixes syntax error from use of deprecated unwrapped qw()
+pmhahn@pmhahn.de
+[pius]
+- Better error on GnuPG card issues
+- Remove use of various intermediate shells
+- Clean up quoting
+- Avoid a possible deadlock
+- Fix help message
+matt@mattb.net.nz
+[pius]
+- Support attaching policy URLs to signatures.
+bex@Brians-MacBook-Pro.local
+[pius]
+- Fix count an pluralization of number of UIDs to sign (off by one error)
 
 2.0.11
 Released: 11/24/13
