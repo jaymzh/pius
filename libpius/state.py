@@ -5,6 +5,8 @@ import json
 class SignState(object):
   @classmethod
   def load_signed_keys(self):
+    if not os.path.exists(PIUS_SIGNED_KEYS):
+      return dict()
     fp = open(PIUS_SIGNED_KEYS, 'r')
     data = fp.read()
     try:
