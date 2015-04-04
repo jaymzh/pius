@@ -33,7 +33,7 @@ class PiusSigner(object):
 
   def __init__(self, signer, mode, keyring, gpg_path, tmpdir, outdir,
                encrypt_outfiles, mail, mailer, verbose, sort_keyring,
-               policy_url):
+               policy_url, mail_host):
     self.signer = signer
     self.mode = mode
     self.keyring = keyring
@@ -48,6 +48,7 @@ class PiusSigner(object):
     self.passphrase = ''
     self.tmp_keyring = '%s/%s' % (self.tmpdir, PiusSigner.TMP_KEYRING_FILE)
     self.policy_url = policy_url
+    self.mail_host = mail_host
     self.null = open(os.path.devnull, 'w')
     self.gpg_base_opts = [
       '--keyid-format', 'long'

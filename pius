@@ -331,7 +331,8 @@ def main():
     mailer,
     options.verbose,
     options.sort_keyring,
-    options.policy_url
+    options.policy_url,
+    options.mail_host
   )
 
   if options.all_keys:
