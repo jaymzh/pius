@@ -1,7 +1,6 @@
-PIUS: The PGP Individual UID Signer
+# PIUS: The PGP Individual UID Signer
 
-
-INTRODUCTION
+## Introduction
 
 PIUS started life as a group of bad shell scripts I had thrown together through
 the years after going to various PGP keysigning parties. These scripts
@@ -28,31 +27,21 @@ the 'interactive' mode, which will probably one day go away if gpg-agent
 becomes reliable enough.
 
 
-USAGE
+## Usage
 
-The simplest (but least useful) use form is
-  $ pius -s <your_keyid> <keyid>
+The most common way to use PIUS is with a keyring from a keysigning party, like
+this:
 
-This will sign all UIDs on <keyid>, and export one copy of the for each UID
-with only that UID signed. These keys are exported into a file in /tmp named
-<keyid>__<id>.asc, where id is usually an email address if we can extract one,
-otherwise some other piece of the UID. The '-s' flag denotes the "signing"
-keyid.
+```
+$ pius -A -a -s <your_keyid> -r <path_to_keyring> -m <your_email>
+```
 
-Note this default mode will prompt for your passphrase and cache it for the life
-of the execution so that it can provide it to GnuPG. There are other options,
-please see the SECURITY IMPLICATIONS section below.
-
-After a keysigning party you probably have a party keyring provided by the
-organizer and want to sign most of the keys on it. In this case, don't specify
-the all the keyids to sign and instead probably want something more like:
-  $ pius -A -r </path/to/keyring.gpg> -m <your_email> -s <your_keyid>
-
-The -r flag specifies a keyring to use, and the -A flag says to sign all keyids
-on that keyring. Since you are prompted to verify each fingerprint, you can say
-no to any people on the ring you were unable to verify. The -p flag, as
-previously mentioned, will catch your passphrase. -m will cause pius to email
-out the keys to the respective email addresses from <your_email>.
+For every key (`-A`) on the keyring (`-r`) this will prompt you to verify the
+fingerprint and choose a signing level. Then, if you tell it to, it will sign
+all UIDs on <keyid>, and export one copy of the for each UID with only that UID
+signed. Each one will then be encrypt-emailed off to the email address in the
+UID (`-m`). The `-a` tells it to use gpg-agent and `-s` tells it which key to
+sign with.
 
 There are a variety of other options that you may want:
   * customize the tmpdir and outdir directories (-t and -o respectively)
@@ -67,7 +56,7 @@ There are a variety of other options that you may want:
 And more! See the '-h' option for more.
 
 
-SECURITY IMPLICATIONS
+## Security Implications
 
 The default mode for pius, starting in 2.0.0 is 'cache_passphrase' mode. This
 means that pius will ask you for your passphrase at startup, verify this
@@ -92,19 +81,25 @@ first is that the pexpect code is quite fragile, and the second is that you'll
 have to type your passphrase for every key-UID combination.
 
 
-SENDING EMAILS
+## Sending Emails
 
 When PIUS emails out keys it BCC's you, so you will get a copy of every email
 sent out. If you would like to see what is going to be sent and not have it
 sent, you can either do:
+
+```
   $ pius -T
+```
 
 To have PIUS dump the text of the default email body, or you can use the -n
 option to forcefully override the TO in the envelope of the email. When doing
-this *only* the address specified as an argument to -n will get the email.
+this *only* the address specified as an argument to `-n` will get the email.
 
 If you want to see the email sent when not using PGP/Mime then try:
+
+```
   $ pius -T -O
+```
 
 If you want to customize this message you can do so with the -M option. Note
 that you may use python's named variable interpolation syntax here to have pius
@@ -113,27 +108,30 @@ was signed), and signer (the keyid used to sign, i.e. your keyid). For example,
 you can simply include "%(keyid)s" (without the quotes) to get the keyid.
 
 
-LICENSE
+## License
 
-PIUS is released under the GNU Public License v2 and is Copyright Phil Dibowitz
-<phil@ipom.com>.
+PIUS is released under the GNU Public License v2 and is Copyright `Phil Dibowitz
+<phil@ipom.com>`.
 
 
-CONFIG FILE
+## Config File
 
 You can specify options you'd like to always use in a ~/.pius file. The format
 of this file is option=value. The "=value" part is obviously not required for
 options that don't have a value. An example might be:
 
-  mail=you@sample.com
-  tmp-dir=/home/you/pius/tmp
+```
+mail=you@sample.com
+tmp-dir=/home/you/pius/tmp
+```
 
-Pius will except both '=', ':', or whitespace as a separator, and will handle
+Pius will except both `=`, `:`, or whitespace as a separator, and will handle
 extra whitespace around any separator.
 
 
 Phil Dibowitz
+
 phil@ipom.com
 
 
-# vim:shiftwidth=2:tabstop=2:expandtab:textwidth=80:softtabstop=2:ai:
+vim:shiftwidth=2:tabstop=2:expandtab:textwidth=80:softtabstop=2:ai:
