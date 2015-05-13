@@ -22,6 +22,12 @@ class SignState(object):
     prev_signstate = SignState.load_signed_keys()
     # merge the two with the one we're passed in winning
     result = dict(prev_signstate.items() + signstate.items())
+    if not os.path.exists(PIUS_HOME):
+      os.mkdir(PIUS_HOME, 0750)
+    if not os.path.isdir(PIUS_HOME):
+      print ('WARNING: There is a ~/.pius which is not a directory.'
+             ' Not storing state.')
+      return
     fp = open(PIUS_SIGNED_KEYS, 'w')
     fp.write(json.dumps(result))
     fp.close()
