@@ -30,6 +30,7 @@ class PiusSigner(object):
   GPG_GOOD_PASS = '[GNUPG:] GOOD_PASSPHRASE'
   GPG_SIG_BEG = '[GNUPG:] BEGIN_SIGNING'
   GPG_SIG_CREATED = '[GNUPG:] SIG_CREATED'
+  GPG_PROGRESS = '[GNUPG:] PROGRESS need_entropy'
 
   def __init__(self, signer, mode, keyring, gpg_path, tmpdir, outdir,
                encrypt_outfiles, mail, mailer, verbose, sort_keyring,
@@ -387,6 +388,8 @@ class PiusSigner(object):
         # we get a ENC_INV.
         debug('Got GPG_KEY_EXP')
         continue
+      elif PiusSigner.GPG_PROGRESS in line:
+        debug('Waiting for it to finish')
       else:
         raise EncryptionUnknownError, line
 
@@ -622,17 +625,9 @@ class PiusSigner(object):
         else:
           print '  ERROR: GPG didn\'t accept the passphrase.'
           raise PassphraseError
-      if 'GOOD_PASSPHRASE' in line:
-        break
       if PiusSigner.GPG_PROMPT in line:
-        print '  ERROR: GPG didn\'t sign.'
-        raise GpgUnknownError(line)
+        break
 
-    debug('Saving key')
-    self.gpg_wait_for_string(gpg.stdout, PiusSigner.GPG_PROMPT)
-    gpg.stdin.write('save\n')
-
-    gpg.wait()
     return True
 
   def print_filenames(self, uids):
@@ -818,6 +813,8 @@ class PiusSigner(object):
             PiusSigner.GPG_SIG_CREATED in line):
         debug('Got skippable stuff')
         continue
+      elif PiusSigner.GPG_PROGRESS in line:
+        debug('Waiting for it to finish')
       else:
         raise EncryptionUnknownError, line
 
