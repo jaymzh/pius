@@ -46,25 +46,25 @@ def print_default_email(no_mime):
 # being passed to -m"... instead of "oh, -e is an option, -m is missing it's
 # required argument. This is an ugly hack around that.
 #
-def check_not_another_opt(option, opt, value):
+def check_not_another_opt(_, opt, value):
   '''Ensure argument to an option isn't another option.'''
-  match = re.search('^\-', value)
+  match = re.search(r'^\-', value)
   if match:
     raise OptionValueError('Option %s: Value %s looks like another option'
                            ' instead of the required argument' % (opt, value))
   return value
 
-def check_email(option, opt, value):
+def check_email(_, opt, value):
   '''Ensure argument seems like an email address.'''
-  match = re.match('.+@.+\..+', value)
+  match = re.match(r'.+@.+\..+', value)
   if not match:
     raise OptionValueError('Option %s: Value %s does not appear like a well'
                            ' formed email address' % (opt, value))
   return value
 
-def check_keyid(option, opt, value):
+def check_keyid(_, opt, value):
   '''Ensure argument seems like a keyid.'''
-  match = re.match('[0-9a-fA-Fx]', value)
+  match = re.match(r'[0-9a-fA-Fx]', value)
   if not match:
     raise OptionValueError('Option %s: Value %s does not appear to be a KeyID'
                            % (opt, value))
@@ -141,7 +141,8 @@ def parse_dotfile(parser):
     if not os.path.isfile(PIUS_RC):
       os.rename(tmp_file, PIUS_RC)
     else:
-      print 'WARNING: Both %s and %s exist... ignoring %s' % (PIUS_RC, tmp_file)
+      print ('WARNING: Both %s and %s exist... ignoring %s' %
+             (PIUS_RC, tmp_file, tmp_file))
 
   # if we have a config file, parse it
   opts = []
@@ -207,9 +208,10 @@ def main():
                     nargs=1, type='not_another_opt',
                     help='Hostname of SMTP server. [default: %default]')
   parser.add_option('-i', '--interactive', action='store_const',
-                    const=MODE_INTERACTIVE, dest='mode', help='Use the pexpect'
-                      ' module for signing and drop to the gpg shell for'
-                      ' entering the passphrase. [default: false]')
+                    const=MODE_INTERACTIVE, dest='mode',
+                    help='Use the pexpect module for signing and drop to the'
+                         ' gpg shell for entering the passphrase. [default:'
+                         ' false]')
   parser.add_option('-I', '--import', action='store_true',
                     dest='import_keyring',
                     help='Also import the unsigned keys from the keyring'
@@ -219,14 +221,14 @@ def main():
   parser.add_option('-m', '--mail', dest='mail', metavar='EMAIL', nargs=1,
                     type='email',
                     help='Email the encrypted, signed keys to the'
-                          ' respective email addresses. EMAIL is the address'
-                          ' to send from. See also -H and -P.')
+                         ' respective email addresses. EMAIL is the address'
+                         ' to send from. See also -H and -P.')
   parser.add_option('-M', '--mail-text', dest='mail_text', metavar='FILE',
                     nargs=1, type='not_another_opt',
                     help='Use the text in FILE as the body of email when'
-                          ' sending out emails instead of the default text.'
-                          ' To see the default text use'
-                          ' --print-default-email. Requires -m.')
+                         ' sending out emails instead of the default text.'
+                         ' To see the default text use'
+                         ' --print-default-email. Requires -m.')
   parser.add_option('-N', '--no-sort-keyring', dest='sort_keyring',
                     action='store_false',
                     help='Do not sort the keyring by name.')
@@ -306,33 +308,33 @@ def main():
 
   if options.mail:
     mailer = pmailer.PiusMailer(
-      options.mail,
-      options.mail_host,
-      options.mail_port,
-      options.mail_user,
-      options.mail_tls,
-      options.mail_no_pgp_mime,
-      options.mail_override,
-      options.mail_text,
-      options.tmp_dir
+        options.mail,
+        options.mail_host,
+        options.mail_port,
+        options.mail_user,
+        options.mail_tls,
+        options.mail_no_pgp_mime,
+        options.mail_override,
+        options.mail_text,
+        options.tmp_dir
     )
   else:
     mailer = None
 
   signer = psigner.PiusSigner(
-    options.signer,
-    options.mode,
-    options.keyring,
-    options.gpg_path,
-    options.tmp_dir,
-    options.out_dir,
-    options.encrypt_outfiles,
-    options.mail,
-    mailer,
-    options.verbose,
-    options.sort_keyring,
-    options.policy_url,
-    options.mail_host
+      options.signer,
+      options.mode,
+      options.keyring,
+      options.gpg_path,
+      options.tmp_dir,
+      options.out_dir,
+      options.encrypt_outfiles,
+      options.mail,
+      mailer,
+      options.verbose,
+      options.sort_keyring,
+      options.policy_url,
+      options.mail_host
   )
 
   if options.all_keys:
@@ -382,7 +384,7 @@ def main():
 
   # If the user asked, import the keys
   if options.import_keyring:
-    if ((not options.keyring) or (options.keyring == DEFAULT_KEYRING)):
+    if (not options.keyring) or (options.keyring == DEFAULT_KEYRING):
       print ('WARNING: Ignoring -i: Either -r wasn\'t specified, or it was'
              ' the same as the default keyring.')
     else:

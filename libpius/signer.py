@@ -51,12 +51,12 @@ class PiusSigner(object):
     self.mail_host = mail_host
     self.null = open(os.path.devnull, 'w')
     self.gpg_base_opts = [
-      '--keyid-format', 'long'
+      '--keyid-format', 'long',
+      '--no-auto-check-trustdb',
     ]
     self.gpg_quiet_opts = [
       '-q',
       '--no-tty',
-      '--no-auto-check-trustdb',
       '--batch',
     ]
     self.gpg_fd_opts = [
