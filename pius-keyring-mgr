@@ -24,18 +24,19 @@ import sys
 from libpius.constants import VERSION
 
 DEBUG_ON = False
-BADKEYS_RE = re.compile('00000000|12345678|no pgp key')
-LIST_SEP_RE = re.compile('\s*,\s*')
-DEFAULT_KEYSERVERS = ['pool.sks-keyservers.net', 'pgp.mit.edu', 'keys.gnupg.net']
-
+BADKEYS_RE = re.compile(r'00000000|12345678|no pgp key')
+LIST_SEP_RE = re.compile(r'\s*,\s*')
+DEFAULT_KEYSERVERS = [
+    'pool.sks-keyservers.net', 'pgp.mit.edu', 'keys.gnupg.net'
+]
 HOME = os.environ.get('HOME')
 GNUPGHOME = os.environ.get('GNUPGHOME', os.path.join(HOME, '.gnupg'))
 DEFAULT_GPG_PATH = '/usr/bin/gpg'
-DEFAULT_CSV_DELIMITER=','
-DEFAULT_CSV_NAME_FIELD=2
-DEFAULT_CSV_EMAIL_FIELD=3
-DEFAULT_CSV_FP_FIELD=4
-DEFAULT_TMP_DIR='/tmp/pius_keyring_mgr_tmp'
+DEFAULT_CSV_DELIMITER = ','
+DEFAULT_CSV_NAME_FIELD = 2
+DEFAULT_CSV_EMAIL_FIELD = 3
+DEFAULT_CSV_FP_FIELD = 4
+DEFAULT_TMP_DIR = '/tmp/pius_keyring_mgr_tmp'
 
 DEFAULT_EMAIL_TEXT = '''Dear %(name)s,
 
@@ -105,7 +106,7 @@ def parse_csv(filename, sep, name_field, email_field, fp_field, ignore_emails,
     fp = parts[fp_field].replace(' ', '')
     if (parts[fp_field] in ignore_fp_list
         or parts[email_field] in ignore_email_list):
-      debug('Ignoring "%s" at user request' % line);
+      debug('Ignoring "%s" at user request' % line)
       continue
     keyid = keyid_from_fp(fp)
     keys.append({'name': parts[name_field],
@@ -121,7 +122,7 @@ def parse_mbox(filename):
   just the ASCII-armored key is stored.'''
   box = mailbox.mbox(filename)
   key_re = re.compile(r'(-----BEGIN PGP PUBLIC KEY BLOCK-----\n.*-----END PGP'
-                      ' PUBLIC KEY BLOCK-----)', re.DOTALL);
+                      ' PUBLIC KEY BLOCK-----)', re.DOTALL)
   fp_re = re.compile(r'((?:[\dA-Fa-f]{4}[ \t\n]*){10})')
   uid_re = re.compile(r'(.*) <(.*)>$')
   fixname1_re = re.compile(r'^[\'"]')
@@ -177,8 +178,10 @@ def parse_mbox(filename):
 class KeyringBuilder(object):
   '''A class for building and managing keyrings.'''
 
-  QUIET_OPTS = '-q --no-tty --no-auto-check-trustdb --batch'
-  AUTO_OPTS = '--command-fd 0 --status-fd 1 --no-options --with-colons'
+  QUIET_OPTS = ['-q', '--no-tty', '--batch']
+  AUTO_OPTS = [
+      '--command-fd',  '0', '--status-fd', '1', '--no-options', '--with-colons'
+  ]
 
   def __init__(self, gpg_path, keyring, keyservers, tmp_dir):
     self.gpg = gpg_path
@@ -187,8 +190,16 @@ class KeyringBuilder(object):
     self.notfound = []
     self.keyservers = keyservers
     self.tmp_dir = tmp_dir
-    self.basecmd = '%s --no-default-keyring --keyring %s' % (self.gpg,
-                                                             self.keyring)
+    self.party = ''
+    self.mail_text = ''
+    self.fromaddr = ''
+    self.basecmd = [
+        self.gpg,
+        '--keyring', self.keyring,
+        '--no-default-keyring',
+        # must specify this everytime you specify no-defualt-keyring
+        '--no-auto-check-trustdb'
+    ]
 
   #
   # BEGIN INTERNAL FUNCTIONS
@@ -209,10 +220,10 @@ class KeyringBuilder(object):
 
   def _import_key_file(self, kfile):
     '''Given a keyfile, import it into our keyring.'''
-    extra_opts = '%s %s' % (self.QUIET_OPTS, self.AUTO_OPTS)
-    cmd = '%s %s --import %s' % (self.basecmd, extra_opts, kfile)
-    debug(cmd)
-    gpg = subprocess.Popen(cmd, shell=True, stdin=None, close_fds=True,
+    extra_opts = [self.QUIET_OPTS, self.AUTO_OPTS]
+    cmd = self.basecmd + extra_opts + ['--import', kfile]
+    debug(' '.join(cmd))
+    gpg = subprocess.Popen(cmd, shell=False, stdin=None, close_fds=True,
                            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     for line in gpg.stdout:
       parts = line.strip().split(' ')
@@ -273,17 +284,14 @@ Subject: %(party)sPGP Keysignign Party: Can't find your key!''' % interp
     smtp = smtplib.SMTP('localhost', '587')
     smtp.ehlo()
     smtp.sendmail(efrom, eto, body)
-    smtp.quit
+    smtp.quit()
 
   #
   # BEGIN PUBLIC FUNCTIONS
   #
   def have_key(self, key):
-    basecmd = '%s %s --no-default-keyring --keyring %s' % (self.gpg,
-                                                           self.QUIET_OPTS,
-                                                           self.keyring)
-    cmd = '%s --fingerprint %s' % (basecmd, key)
-    gpg = subprocess.Popen(cmd, shell=True, stdin=None, close_fds=True,
+    cmd = self.basecmd + self.QUIET_OPTS + ['--fingerprint', key]
+    gpg = subprocess.Popen(cmd, shell=False, stdin=None, close_fds=True,
                            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     gpg.wait()
     retval = gpg.returncode
@@ -294,14 +302,15 @@ Subject: %(party)sPGP Keysignign Party: Can't find your key!''' % interp
 
   def get_key(self, key):
     '''Try to get key from any keyservers we know about.'''
-    basecmd = ('%s %s --no-default-keyring --keyring %s --keyserver-options'
-               ' timeout=2' % (self.gpg, self.QUIET_OPTS, self.keyring))
+    basecmd = self.basecmd + self.QUIET_OPTS + [
+        '--keyserver-options', 'timeout=2',
+    ]
 
     found = False
     for ks in self.keyservers:
-      cmd = '%s --keyserver %s --recv-key %s' % (basecmd, ks, key)
-      debug(cmd)
-      gpg = subprocess.Popen(cmd, shell=True, stdin=None, close_fds=True,
+      cmd = basecmd + ['--keyserver', ks, '--recv-key', key]
+      debug(' '.join(cmd))
+      gpg = subprocess.Popen(cmd, shell=False, stdin=None, close_fds=True,
                              stdout=subprocess.PIPE, stderr=subprocess.PIPE)
       gpg.wait()
       retval = gpg.returncode
@@ -361,16 +370,17 @@ Subject: %(party)sPGP Keysignign Party: Can't find your key!''' % interp
   def get_all_keyids(self):
     '''Given a keyring, get all the KeyIDs from it.'''
     debug('extracting all keyids from keyring')
-    extra_opts = '%s %s --fixed-list-mode' % (self.QUIET_OPTS, self.AUTO_OPTS)
-    cmd = '%s %s --fingerprint 2>&1' % (self.basecmd, extra_opts)
+    extra_opts = self.QUIET_OPTS + self.AUTO_OPTS + ['--fixed-list-mode']
+    cmd = self.basecmd + extra_opts + ['--fingerprint']
     debug(cmd)
-    gpg = os.popen(cmd, 'r')
+    gpg = subprocess.Popen(cmd, shell=False, stdout=subprocess.PIPE,
+                           stderr=subprocess.STDOUT)
     # We use 'pub' instead of 'fpr' to support old crufty keys too...
     pub_re = re.compile('^pub:')
     uid_re = re.compile('^uid:')
     key_tuples = []
     name = keyid = None
-    for line in gpg.readlines():
+    for line in gpg.stdout.readlines():
       if pub_re.match(line):
         lineparts = line.split(':')
         keyid = lineparts[4][8:16]
@@ -380,25 +390,24 @@ Subject: %(party)sPGP Keysignign Party: Can't find your key!''' % interp
         debug('Got id %s for %s' % (keyid, name))
         key_tuples.append((name, keyid))
         name = keyid = None
-    gpg.close()
 
     # sort the list
-    keyids = [ i[1] for i in sorted(key_tuples) ]
+    keyids = [i[1] for i in sorted(key_tuples)]
     return keyids
 
   def prune(self):
     self._backup_keyring()
     keyids = self.get_all_keyids()
 
-    extra_opts = '%s %s' % (self.QUIET_OPTS, self.AUTO_OPTS)
-    basecmd = '%s --fingerprint' % self.basecmd
-    basedelcmd = '%s %s --yes --delete-key' % (self.basecmd, extra_opts)
+    basecmd = self.basecmd + ['--fingerprint']
+    basedelcmd = self.basecmd + self.QUIET_OPTS + self.AUTO_OPTS + [
+        '--yes', '--delete-key'
+    ]
     for fp in keyids:
-      cmd = '%s %s' % (basecmd, fp)
-      gpg = os.popen(cmd, 'r')
-      for line in gpg:
+      cmd = basecmd + [fp]
+      gpg = subprocess.Popen(cmd, shell=False, stdout=subprocess.PIPE)
+      for line in gpg.stdout:
         print line.strip()
-      gpg.close()
       ans = raw_input('Delete this key? (\'yes\' to delete, \'q\' to quit'
                       ' anything to skip) ')
       if ans in ('q', 'Q'):
@@ -406,14 +415,20 @@ Subject: %(party)sPGP Keysignign Party: Can't find your key!''' % interp
         sys.exit(1)
       if ans in ('yes', 'y'):
         print "Deleting key ..."
-        cmd = '%s %s' % (basedelcmd, fp)
-        debug(cmd)
-        gpg = os.popen(cmd, 'r')
-        gpg.close()
+        cmd = basedelcmd + [fp]
+        debug(' '.join(cmd))
+        subprocess.call(cmd)
       print
 
     backup = '%s-pius-backup' % self.keyring
     print 'A backup file is in %s' % backup
+
+  def raw(self, args):
+    cmd = self.basecmd + args
+    debug(' '.join(cmd))
+    ret = subprocess.call(cmd, shell=False)
+    sys.exit(ret)
+   
 # END class KeyringBuilder
 
 
@@ -425,8 +440,8 @@ def check_options(parser, mode, options):
     parser.print_help()
     sys.exit(0)
 
-  if not mode or mode not in ('build', 'prune'):
-    parser.error('Invalid or missing mode.')
+  if not mode or mode not in ('build', 'prune', 'raw'):
+    parser.error('Invalid or missing mode: %s' % mode)
 
   if options.debug:
     DEBUG_ON = True
@@ -479,8 +494,8 @@ you@company.com
                     help='Debug output')
   common.add_option('-g', '--gpg-path', dest='gpg_path', metavar='PATH',
                     help='Path to gpg binary. [default; %default]')
-  common.add_option('-r', '--keyring', dest='keyring', metavar='KEYRING', nargs=1,
-                    help='Keyring file.')
+  common.add_option('-r', '--keyring', dest='keyring', metavar='KEYRING',
+                    nargs=1, help='Keyring file.')
   common.add_option('-v', '--verbose', dest='verbose', action='store_true',
                     help='Print summaries')
   parser.add_option_group(common)
@@ -502,17 +517,17 @@ could not be found. For completness sake, it can also import keys from a file.
                         ' want -D, -E, -F, and -N to control CSV parsing.')
   build.add_option('-D', '--delimiter', dest='delimiter', metavar='DELIMITER',
                    help='Only meaningful with -c. Field delimiter to use when'
-                          ' parsing the CSV. [default: %default]')
+                        ' parsing the CSV. [default: %default]')
   build.add_option('-E', '--email-field', dest='email_field', metavar='FIELD',
                    type='int',
                    help='Only meaningful with -c. The field number of the CSV'
-                         ' where the email is. [default: %default]')
+                        ' where the email is. [default: %default]')
   build.add_option('-F', '--fp-field', dest='fp_field', metavar='FIELD',
-                    type='int',
-                    help='Only meaningful with -c. The field number of the CSV'
-                         ' where the fingerprint is. [default: %default]')
+                   type='int',
+                   help='Only meaningful with -c. The field number of the CSV'
+                        ' where the fingerprint is. [default: %default]')
   build.add_option('-m', '--mail', dest='mail', metavar='EMAIL',
-                    help='Email people whos keys were not found, using EMAIL')
+                   help='Email people whos keys were not found, using EMAIL')
   build.add_option('-M', '--mail-text', dest='mail_text', metavar='FILE',
                    help='Use the text in FILE as the body of email when'
                         ' sending out emails instead of the default text.'
@@ -521,18 +536,19 @@ could not be found. For completness sake, it can also import keys from a file.
   build.add_option('-N', '--name-field', dest='name_field', metavar='FIELD',
                    type='int',
                    help='Only meaningful with -c. The field number of the CSV'
-                         ' where the name is. [default: %default]')
+                        ' where the name is. [default: %default]')
   build.add_option('-n', '--override-email', dest='mail_override',
                    metavar='EMAIL', nargs=1,
                    help='Rather than send to the user, send to this address.'
-                         ' Mostly useful for debugging.')
+                        ' Mostly useful for debugging.')
   build.add_option('-p', '--party', dest='party', metavar='NAME', nargs=1,
                    help='The name of the party. This will be printed in the'
-                         ' emails sent out. Only useful with -m.')
+                        ' emails sent out. Only useful with -m.')
   build.add_option('-s', '--keyservers', dest='keyservers', metavar='KEYSERVER',
-                   action='append', help='Keyservers to try. Specify this option'
-                   ' once for each server (-s foo -s bar). [default: %s]' %
-                   ', '.join(DEFAULT_KEYSERVERS))
+                   action='append',
+                   help=('Keyservers to try. Specify this option once for each'
+                         'server (-s foo -s bar). [default: %s]' %
+                         ', '.join(DEFAULT_KEYSERVERS)))
   build.add_option('-t', '--tmp-dir', dest='tmp_dir',
                    help='Directory to put temporary stuff in. [default:'
                         ' %default]')
@@ -553,10 +569,21 @@ There are no options'''
   prune = optparse.OptionGroup(parser, prune_intro)
   parser.add_option_group(prune)
 
+  raw_intro = '''
+The "raw" mode allows you pass gpg options which will be run for you. The
+options will be added to the options necessary to operate on the keyring safely
+(to load only the party keyring, not your keyring). This is primary useful for
+adding keys manually. All such options should be passed after a '--' to prevent
+pius-keyring-manager interpreting them as options to itself. Example:
+
+  pius-keyring-manager raw -r path/to/keyring.gpg -- --recv-key <keyid>'''
+  raw = optparse.OptionGroup(parser, raw_intro)
+  parser.add_option_group(raw)
+
   (options, args) = parser.parse_args()
   mode = None
   if args:
-    mode = args.pop()
+    mode = args.pop(0)
 
   if options.print_default_email:
     print_default_email()
@@ -574,6 +601,10 @@ There are no options'''
 
   if mode == 'prune':
     kb.prune()
+    sys.exit(0)
+
+  if mode == 'raw':
+    kb.raw(args)
     sys.exit(0)
 
   # all that's left is mode == 'build'
