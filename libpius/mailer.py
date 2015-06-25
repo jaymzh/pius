@@ -29,6 +29,9 @@ class PiusMailer(object):
 
   @staticmethod
   def add_options(parser):
+    parser.set_defaults(mail_host=DEFAULT_MAIL_HOST,
+                        mail_port=DEFAULT_MAIL_PORT,
+                        mail_tls=True)
     parser.add_option('-u', '--mail-user', dest='mail_user', metavar='USER',
                       type='not_another_opt', nargs=1,
                       help='Authenticate to the SMTP server, and use username'

@@ -106,10 +106,7 @@ def main():
                       out_dir=DEFAULT_OUT_DIR,
                       tmp_dir=DEFAULT_TMP_DIR,
                       keyring=DEFAULT_KEYRING,
-                      sort_keyring=True,
-                      mail_host=DEFAULT_MAIL_HOST,
-                      mail_port=DEFAULT_MAIL_PORT,
-                      mail_tls=True)
+                      sort_keyring=True)
   parser.add_option('-a', '--use-agent', action='store_const', const=MODE_AGENT,
                     dest='mode',
                     help='Use pgp-agent instead of letting gpg prompt the'
