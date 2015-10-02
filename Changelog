@@ -1,3 +1,22 @@
+2.2.0
+Released: 10/02/15
+phil@ipom.com:
+[meta]
+- significant refactoring of code into more classes
+- add pius-report
+- add support for gpg2
+[pius]
+- fix crash on lack of ~/.pius directory
+- move README to MD format
+- fix various holes where we can nuke the user's trust database
+- massive lint/style cleanup
+[pius-keyring-mgr]
+- refactor to not use subshells
+- massive lint/style cleanup
+- fix various holes where we can nuke the user's trust database
+- add new "raw" mode for organizers to do direct keyring manipulation
+
+
 2.1.1
 Released: 04/07/15
 pmhahn@pmhahn.de
