@@ -95,6 +95,18 @@ def warn_if_short_keyids(ids):
         print 'ERROR: Danger not acknowledged, exiting.'
         sys.exit(1)
 
+def warn_for_gpg1():
+  print(
+    "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+    "\n"
+    "!! WARNING: You are using GnuPG 1.x. Support for the 1.x series will be !!"
+    "\n"
+    "!!          dropped in the next release, please migrated to GnuPG 2.x.  !!"
+    "\n"
+    "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+    "\n"
+  )
+
 def main():
   """Main."""
   usage = ('%prog [options] -s <signer_keyid> <keyid> [<keyid> ...]\n'
@@ -253,6 +265,13 @@ def main():
       options.policy_url,
       options.mail_host
   )
+
+  if signer.gpg2:
+    if options.mode != MODE_AGENT:
+      print "ERROR: gpg2 requires using an agent\n"
+      sys.exit(1)
+  else:
+    warn_for_gpg1()
 
   if options.all_keys:
     key_list = signer.get_all_keyids()

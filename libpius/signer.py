@@ -66,6 +66,7 @@ class PiusSigner(object):
           '--passphrase-fd', '0',
           '--status-fd', '1',
     ]
+    self.gpg2 = self._is_gpg2()
 
     if self.mode == MODE_INTERACTIVE:
       try:
@@ -76,6 +77,30 @@ class PiusSigner(object):
       except ImportError:
         parser.error('You chose interactive mode but do not have the pexpect'
                      ' module installed.')
+
+  def _is_gpg2(self):
+    cmd = [self.gpg, '--version']
+    debug(' '.join(cmd))
+    gpg = subprocess.Popen(
+        cmd,
+        stdin=self.null,
+        stdout=subprocess.PIPE,
+        stderr=self.null,
+    )
+
+    for line in gpg.stdout:
+      m = re.match(r'^gpg \(GnuPG\) ([0-9\.]+)$', line)
+      if m:
+        v = m.group(1)
+
+    if not v:
+      print "ERROR: Could not determine gpg version\n"
+      sys.exit(1)
+
+    return v.startswith('2.')
+
+  def is_gpg2(self):
+    return self.gpg2
 
   def _outfile_path(self, ofile):
     '''Internal function to take a filename and put it in self.outdir.'''
@@ -629,11 +654,14 @@ class PiusSigner(object):
       if 'GOOD_PASSPHRASE' in line:
         break
       if PiusSigner.GPG_PROMPT in line:
+        if self.gpg2:
+          break;
         print '  ERROR: GPG didn\'t sign.'
         raise GpgUnknownError(line)
 
     debug('Saving key')
-    self.gpg_wait_for_string(gpg.stdout, PiusSigner.GPG_PROMPT)
+    if not self.gpg2:
+      self.gpg_wait_for_string(gpg.stdout, PiusSigner.GPG_PROMPT)
     gpg.stdin.write('save\n')
 
     gpg.wait()
