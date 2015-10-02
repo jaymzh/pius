@@ -26,10 +26,10 @@ pius-keyring-mgr build -r <path_to_keyring> \
 ```
 
 This will:
-# Find all keys in the mbox and import them to the keyring
-# Find all fingerprints in the mbox and attempt to find them on a keyserver and
+* Find all keys in the mbox and import them to the keyring
+* Find all fingerprints in the mbox and attempt to find them on a keyserver and
 import them.
-# Email any user who sent a fingerprint whose key cannot be found on a keyserver
+* Email any user who sent a fingerprint whose key cannot be found on a keyserver
 
 If you're using a system that takes registrations from a web form and can get a
 CSV of information you can have pius-keyring-mgr parse that by passing in:
