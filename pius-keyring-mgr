@@ -575,7 +575,9 @@ options will be added to the options necessary to operate on the keyring safely
 adding keys manually. All such options should be passed after a '--' to prevent
 pius-keyring-manager interpreting them as options to itself. Example:
 
-  pius-keyring-manager raw -r path/to/keyring.gpg -- --recv-key <keyid>'''
+  pius-keyring-manager raw -r path/to/keyring.gpg -- --recv-key <keyid>
+
+There are no options'''
   raw = optparse.OptionGroup(parser, raw_intro)
   parser.add_option_group(raw)
 

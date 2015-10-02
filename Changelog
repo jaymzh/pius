@@ -10,12 +10,12 @@ phil@ipom.com:
 - move README to MD format
 - fix various holes where we can nuke the user's trust database
 - massive lint/style cleanup
+- change the default mode use a the gpg-agent
 [pius-keyring-mgr]
 - refactor to not use subshells
 - massive lint/style cleanup
 - fix various holes where we can nuke the user's trust database
 - add new "raw" mode for organizers to do direct keyring manipulation
-
 
 2.1.1
 Released: 04/07/15
