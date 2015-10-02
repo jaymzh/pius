@@ -122,7 +122,7 @@ def main():
   parser.add_option('-a', '--use-agent', action='store_const', const=MODE_AGENT,
                     dest='mode',
                     help='Use pgp-agent instead of letting gpg prompt the'
-                         ' user for every UID. [default: false]')
+                         ' user for every UID. [default: true]')
   parser.add_option('-A', '--all-keys', action='store_true', dest='all_keys',
                     help='Sign all keys on the keyring. Requires -r.')
   parser.add_option('-b', '--gpg-path', dest='gpg_path', metavar='PATH',
@@ -175,7 +175,7 @@ def main():
                     const=MODE_CACHE_PASSPHRASE, dest='mode',
                     help='Cache private key passphrase in memory and provide'
                          ' it to gpg instead of letting gpg prompt the user'
-                         ' for every UID. [default: true]')
+                         ' for every UID. [default: false]')
   parser.add_option('-P', '--mail-port', dest='mail_port', metavar='PORT',
                     nargs=1, type='int',
                     help='Port of SMTP server. [default: %default]')
