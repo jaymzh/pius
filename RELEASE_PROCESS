@@ -17,7 +17,8 @@
   cd /tmp/pius-$version
   # poke around
   cd ..
-  tar jcf pius-$version.tar.bz2 pius-$version
+  mv pius-$version-prep.tar pius-$version.tar
+  bzip2 pius-$version.tar
 
 5. Sign
   gpg -ab /tmp/pius-$version.tar.bz2
