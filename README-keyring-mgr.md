@@ -80,6 +80,7 @@ Everything after the `--` is passed directly to gpg.
 
 
 Phil Dibowitz
+
 phil@ipom.com
 
-# vim:shiftwidth=2:tabstop=2:expandtab:textwidth=80:softtabstop=2:ai:
+vim:shiftwidth=2:tabstop=2:expandtab:textwidth=80:softtabstop=2:ai:

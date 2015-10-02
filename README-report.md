@@ -15,8 +15,9 @@ pius-report -r <keyring> -p "My Party"
 ```
 
 This will do several things:
+
 1. Refresh all keys on that keyring (to ensure anyone who has uploaded signatures
-  you sent them are accounted for)
+   you sent them are accounted for)
 2. Cross reference all signatures to and from you to determine who didn't sign whom
 3. For keys missing your signature you will get three options
   * Assume all keys not signed were on purpose[1]
@@ -31,5 +32,8 @@ This will do several things:
 all such keys need to be signed then you won't email people who forgot to upload
 signatures you sent them to remind them to do so.
 
+Phil Dibowitz
+
+phil@ipom.com
 
 vim:shiftwidth=2:tabstop=2:expandtab:textwidth=80:softtabstop=2:ai:
