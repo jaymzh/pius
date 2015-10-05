@@ -88,8 +88,13 @@ class PiusSigner(object):
         stderr=self.null,
     )
 
+    v = None
     for line in gpg.stdout:
-      m = re.match(r'^gpg \(GnuPG\) ([0-9\.]+)$', line)
+      # On Linux this looks like:
+      #   gpg (GnuPG) 2.1.8
+      # On Mac this looks like:
+      #   gpg (GnuPG/MacGPG2) 2.0.28
+      m = re.match(r'^gpg \(GnuPG.*\) ([0-9\.]+)$', line)
       if m:
         v = m.group(1)
 
