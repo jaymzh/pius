@@ -80,7 +80,7 @@ class PiusSigner(object):
 
   def _is_gpg2(self):
     cmd = [self.gpg, '--version']
-    debug(' '.join(cmd))
+    logcmd(cmd)
     gpg = subprocess.Popen(
         cmd,
         stdin=self.null,
@@ -131,7 +131,7 @@ class PiusSigner(object):
         '--fingerprint',
         '--fixed-list-mode',
     ]
-    debug(' '.join(cmd))
+    logcmd(cmd)
     gpg = subprocess.Popen(
         cmd,
         stdin=self.null,
@@ -171,7 +171,7 @@ class PiusSigner(object):
         '--keyring', self.keyring,
         '--fingerprint', key,
     ]
-    debug(cmd)
+    logcmd(cmd)
     gpg = subprocess.Popen(cmd,
                            stdin=self.null,
                            stdout=subprocess.PIPE,
@@ -227,14 +227,14 @@ class PiusSigner(object):
         '-r', self.signer,
         '-e', filename,
     ]
-    debug(cmd)
+    logcmd(cmd)
     subprocess.call(cmd, stdout=self.null, stderr=self.null, close_fds=True)
     cmd = [self.gpg] + self.gpg_base_opts + self.gpg_quiet_opts + \
       self.gpg_fd_opts + [
           '--output', filename_dec,
           '-d', filename_enc,
       ]
-    debug(cmd)
+    logcmd(cmd)
     gpg = subprocess.Popen(cmd, stdin=subprocess.PIPE,
                            stdout=subprocess.PIPE,
                            stderr=self.null,
@@ -274,7 +274,7 @@ class PiusSigner(object):
           '--with-colons',
           '--edit-key', key,
       ]
-    debug(cmd)
+    logcmd(cmd)
     gpg = subprocess.Popen(cmd, stdin=subprocess.PIPE,
                            stdout=subprocess.PIPE,
                            stderr=self.null,
@@ -393,7 +393,7 @@ class PiusSigner(object):
           '--output', enc_path,
           '-e', filename,
       ]
-    debug(cmd)
+    logcmd(cmd)
     gpg = subprocess.Popen(cmd, stdin=subprocess.PIPE,
                            stdout=subprocess.PIPE,
                            stderr=self.null,
@@ -430,7 +430,7 @@ class PiusSigner(object):
   def _run_and_check_status(self, cmd):
     '''Helper function for running a gpg call that requires no input
     but that we want to make sure succeeded.'''
-    debug(cmd)
+    logcmd(cmd)
     gpg = subprocess.Popen(cmd, stdin=subprocess.PIPE,
                            stdout=self.null,
                            stderr=self.null,
@@ -506,7 +506,7 @@ class PiusSigner(object):
         '--no-use-agent',
         '--edit-key', key,
     ] + self.policy_opts()
-    debug(' '.join(cmd))
+    logcmd(cmd)
     gpg = pexpect.spawn(' '.join((quote(arg) for arg in cmd)))
     gpg.setecho(False)
     gpg.expect('gpg> ')
@@ -563,7 +563,7 @@ class PiusSigner(object):
           '--no-ask-cert-level',
           '--edit-key', key,
       ] + self.policy_opts()
-    debug(cmd)
+    logcmd(cmd)
     gpg = subprocess.Popen(cmd, stdin=subprocess.PIPE,
                            stdout=subprocess.PIPE,
                            stderr=self.null,
@@ -814,7 +814,7 @@ class PiusSigner(object):
           '--output', outfile,
           infile,
       ]
-    debug(cmd)
+    logcmd(cmd)
     gpg = subprocess.Popen(cmd, stdin=subprocess.PIPE,
                            stdout=subprocess.PIPE,
                            stderr=self.null,

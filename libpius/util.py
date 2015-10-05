@@ -40,6 +40,9 @@ def debug(line):
   if DEBUG_ON:
     print 'DEBUG:', line
 
+def logcmd(cmd):
+  debug("Running: %s" % ' '.join(cmd))
+
 def clean_files(flist):
   '''Delete a list of files.'''
   for cfile in flist:
