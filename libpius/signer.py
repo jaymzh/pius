@@ -2,7 +2,7 @@
 
 # vim:shiftwidth=2:tabstop=2:expandtab:textwidth=80:softtabstop=2:ai:
 
-from libpius.util import debug, clean_files
+from libpius.util import debug, clean_files, logcmd
 from libpius.constants import *
 from libpius.exceptions import *
 import getpass
