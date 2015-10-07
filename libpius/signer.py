@@ -63,10 +63,12 @@ class PiusSigner(object):
     ]
     self.gpg_fd_opts = [
           '--command-fd', '0',
-          '--passphrase-fd', '0',
           '--status-fd', '1',
     ]
     self.gpg2 = self._is_gpg2()
+
+    if not self.gpg2:
+        self.gpg_fd_opts += ['--passphrase-fd', '0',]
 
     if self.mode == MODE_INTERACTIVE:
       try:
@@ -571,7 +573,8 @@ class PiusSigner(object):
 
     if self.mode == MODE_AGENT:
       # For some reason when using agent an initial enter is needed
-      gpg.stdin.write('\n')
+      if not self.gpg2:
+          gpg.stdin.write('\n')
     else:
       # For some unidentified reason you must send the passphrase
       # first, not when it asks for it.
@@ -645,6 +648,9 @@ class PiusSigner(object):
     while True:
       line = gpg.stdout.readline()
       debug('Got %s' % line)
+      if 'MISSING_PASSPHRASE' in line:
+        print '  ERROR: Agent didn\'t provide passphrase to PGP.'
+        raise AgentError
       if 'BAD_PASSPHRASE' in line:
         if self.mode == MODE_AGENT:
           line = gpg.stdout.readline()
