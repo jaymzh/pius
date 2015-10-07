@@ -675,14 +675,14 @@ class PiusSigner(object):
   def print_filenames(self, uids):
     '''Print the filenames we created for the user.'''
     print '  Signed UNencrypted keys: '
-    for index in range(1, len(uids)):
-      if uids[index]['status'] != 'r' and uids[index]['result']:
-        print '    %(id)s: %(file)s' % uids[index]
+    for uid in uids:
+      if uid['status'] != 'r' and uid['result']:
+        print '    %(id)s: %(file)s' % uid
     if self.encrypt_outfiles:
       print '  Signed encrypted keys: '
-      for index in range(1, len(uids)):
-        if uids[index]['status'] != 'r' and uids[index]['result']:
-          print '    %(id)s: %(enc_file)s' % uids[index]
+      for uid in uids:
+        if uid['status'] != 'r' and uid['result']:
+          print '    %(id)s: %(enc_file)s' % uids
 
   def sign_all_uids(self, key, level):
     '''The main function that signs all the UIDs on a given key.'''
