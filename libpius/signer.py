@@ -648,6 +648,16 @@ class PiusSigner(object):
     while True:
       line = gpg.stdout.readline()
       debug('Got %s' % line)
+      # gpg1 + gpgagent1 reported BAD_PASSPHRASE for both the agent the wrong
+      # passphrase, and for canceling the prompt.
+      #
+      # gpg2.0 + gpgagent2.0 seems to do MISSING_PASSPHRASE and BAD_PASSPHRASE
+      # for the respective answers
+      #
+      # gpg2.1 + gpgagent2.1 seems to just do ERROR
+      if 'ERROR' in line:
+        print '  ERROR: Agent reported an error.'
+        raise AgentError
       if 'MISSING_PASSPHRASE' in line:
         print '  ERROR: Agent didn\'t provide passphrase to PGP.'
         raise AgentError
@@ -657,7 +667,7 @@ class PiusSigner(object):
           debug('Got %s' % line)
           if 'USERID_HINT' in line:
             continue
-          print '  ERROR: Agent didn\'t provide passphrase to PGP.'
+          print '  ERROR: Agent reported the passphrase was incorrect.'
           raise AgentError
         else:
           print '  ERROR: GPG didn\'t accept the passphrase.'
