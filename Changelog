@@ -1,6 +1,21 @@
+2.2.1
+Released: 10/08/15
+phil@ipom.com
+- Fix gpg version matching on Mac
+- Fix crashing when we don't match version
+- Change debug logging of commands to strings instead of lists so users
+  can copy/paste when debugging
+- handle agent errors better on 2.1
+- more clear errors for various agent issues
+brian.andrew@brianandjenny.com
+- fix command debug logging in libpius.signer
+- fix output of keys in verbose mode (we were missing the first one)
+- fix gpg2 interaction on Mac
+- fix gpg2 for 2.0.x users
+
 2.2.0
 Released: 10/02/15
-phil@ipom.com:
+phil@ipom.com
 [meta]
 - significant refactoring of code into more classes
 - add pius-report
