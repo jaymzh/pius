@@ -6,7 +6,7 @@ Signing keys after a PGP Keysigning party can take a lot of time. Further,
 it's very difficult to do **right**: signing each UID separately and emailing it
 off is not something tools make easy. I wanted to solve both of those problems
 and make signing keys the right and most secure way easier and faster. PIUS and
-it's related tools make this process simple, faster, and easier to get right.
+its related tools make this process simple, faster, and easier to get right.
 
 ## Usage
 
@@ -19,7 +19,7 @@ $ pius -A -s <your_keyid> -r <path_to_keyring> -m <your_email>
 
 For every key (`-A`) on the keyring (`-r`) this will prompt you to verify the
 fingerprint and choose a signing level. Then, if you tell it to, it will sign
-all UIDs on <keyid>, and export one copy of the for each UID with only that UID
+all UIDs on <keyid>, and export one copy of them for each UID with only that UID
 signed. Each one will then be encrypt-emailed off to the email address in the
 UID (`-m`). Finally, `-s` tells it which key to sign with.
 
@@ -62,7 +62,7 @@ version when gpg1 support is dropped.
 
 ## Sending Emails
 
-When PIUS emails out keys it BCC's you, so you will get a copy of every email
+When PIUS emails out keys it Bcc's you, so you will get a copy of every email
 sent out. If you would like to see what is going to be sent and not have it
 sent, you can either do:
 
@@ -71,7 +71,7 @@ $ pius -T
 ```
 
 To have PIUS dump the text of the default email body, or you can use the -n
-option to forcefully override the TO in the envelope of the email. When doing
+option to forcefully override the To: in the envelope of the email. When doing
 this *only* the address specified as an argument to `-n` will get the email.
 
 If you want to see the email sent when not using PGP/Mime then try:
@@ -105,7 +105,7 @@ tmp-dir=/home/you/pius/tmp
 use-agent
 ```
 
-PIUS will except `=`, `:` or whitespace as a separator, and will handle
+PIUS will accept `=`, `:` or whitespace as a separator, and will handle
 extra whitespace around any separator.
 
 ## History
@@ -119,7 +119,7 @@ Finally I decided to sit down and combine all these shell scripts into a single
 unified utility to make signing individual UIDs on a multitude of keys as
 painless as possible. Since this was going to be mostly forking off gpg
 instances, it seemed like shell was the way to go. However, after dealing with
-gpg and it's "API" for a while, I quickly realized that was not going to be the
+gpg and its "API" for a while, I quickly realized that was not going to be the
 best course of action. Since I wanted an excuse to write more python, instead
 of my usual perl, I decided to write this in python.
 
