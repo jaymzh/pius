@@ -187,6 +187,10 @@ def main():
   parser.add_option('-s', '--signer', dest='signer', nargs=1,
                     type='keyid',
                     help='The keyid to sign with (required).')
+  parser.add_option('-f', '--force-signer', dest='force_signer',
+                    type='keyid',
+                    help='Force GnuPG to use this exact keyid to sign (do not'
+                         ' guess subkey)')
   parser.add_option('-S', '--no-mail-tls', action='store_false',
                     dest='mail_tls',
                     help='Do not use STARTTLS when talking to the SMTP server.')
@@ -252,6 +256,7 @@ def main():
 
   signer = psigner.PiusSigner(
       options.signer,
+      options.force_signer,
       options.mode,
       options.keyring,
       options.gpg_path,
