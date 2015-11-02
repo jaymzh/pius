@@ -32,6 +32,7 @@ class PiusSigner(object):
   GPG_GOOD_PASS = '[GNUPG:] GOOD_PASSPHRASE'
   GPG_SIG_BEG = '[GNUPG:] BEGIN_SIGNING'
   GPG_SIG_CREATED = '[GNUPG:] SIG_CREATED'
+  GPG_PROGRESS = '[GNUPG:] PROGRESS'
 
   def __init__(self, signer, force_signer, mode, keyring, gpg_path, tmpdir,
                outdir, encrypt_outfiles, mail, mailer, verbose, sort_keyring,
@@ -876,7 +877,8 @@ class PiusSigner(object):
             PiusSigner.GPG_NEED_PASS in line or
             PiusSigner.GPG_GOOD_PASS in line or
             PiusSigner.GPG_SIG_BEG in line or
-            PiusSigner.GPG_SIG_CREATED in line):
+            PiusSigner.GPG_SIG_CREATED in line or
+            PiusSigner.GPG_PROGRESS in line):
         debug('Got skippable stuff')
         continue
       else:
