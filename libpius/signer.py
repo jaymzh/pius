@@ -33,10 +33,17 @@ class PiusSigner(object):
   GPG_SIG_BEG = '[GNUPG:] BEGIN_SIGNING'
   GPG_SIG_CREATED = '[GNUPG:] SIG_CREATED'
 
-  def __init__(self, signer, mode, keyring, gpg_path, tmpdir, outdir,
-               encrypt_outfiles, mail, mailer, verbose, sort_keyring,
+  def __init__(self, signer, force_signer, mode, keyring, gpg_path, tmpdir,
+               outdir, encrypt_outfiles, mail, mailer, verbose, sort_keyring,
                policy_url, mail_host):
     self.signer = signer
+    if not force_signer:
+      # If force_signer is not specified let gpg guess by using the main keyid
+      self.force_signer = self.signer
+    else:
+      # If force_signer is specified make sure that gpg uses this keyid by
+      # putting '!' at the end
+      self.force_signer = force_signer + '!'
     self.mode = mode
     self.keyring = keyring
     self.sort_keyring = sort_keyring
@@ -559,7 +566,7 @@ class PiusSigner(object):
     # Note that if passphrase-fd is different from command-fd, nothing works.
     cmd = [self.gpg] + self.gpg_base_opts + self.gpg_quiet_opts + \
       self.gpg_fd_opts + keyring + [
-          '-u', self.signer,
+          '-u', self.force_signer,
       ] + agent + [
           '--default-cert-level', level,
           '--no-ask-cert-level',
@@ -823,7 +830,7 @@ class PiusSigner(object):
           '--keyring', self.tmp_keyring,
           '--no-options',
           '--always-trust',
-          '-u', self.signer,
+          '-u', self.force_signer,
           '-aes',
           '-r', keyid,
           '-r', self.signer,

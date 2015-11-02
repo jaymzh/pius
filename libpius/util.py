@@ -12,6 +12,7 @@ DEBUG_ON = False
 VALID_OPTIONS = [
     '--mail',
     '--signer',
+    '--force-signer',
     '--use-agent',
     '--import',
     '--mail-host',
