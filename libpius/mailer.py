@@ -1,17 +1,19 @@
 # vim:shiftwidth=2:tabstop=2:expandtab:textwidth=80:softtabstop=2:ai:
+import getpass
+import smtplib
+import socket
 
-from libpius.exceptions import *
-from libpius.constants import *
-from libpius.util import clean_files, debug
 from email import message
 from email import MIMEBase
 from email import MIMEMultipart
 from email import MIMEText
 from email import quopriMIME
 from email.Utils import formatdate
-import getpass
-import smtplib
-import socket
+
+from libpius.exceptions import *
+from libpius.constants import *
+from libpius.util import clean_files, debug
+
 
 class PiusMailer(object):
   def __init__(self, mail, host, port, user, tls, no_mime, override, msg_text,
@@ -72,7 +74,7 @@ class PiusMailer(object):
     '''Verify the password we got works for SMTPAUTH.'''
     try:
       smtp = smtplib.SMTP(self.host, self.port)
-    except socket.error, msg:
+    except socket.error as msg:
       raise MailSendError(msg)
 
     # NOTE WELL: SECURITY IMPORTANT NOTE!
@@ -93,7 +95,7 @@ class PiusMailer(object):
       smtp.login(self.user, self.password)
     except smtplib.SMTPAuthenticationError:
       return False
-    except (smtplib.SMTPException, socket.error), msg:
+    except (smtplib.SMTPException, socket.error) as msg:
       raise MailSendError(msg)
     finally:
       smtp.quit()
@@ -281,7 +283,7 @@ class PiusMailer(object):
 
       smtp.sendmail(self.mail, env_to, msg.as_string())
       smtp.quit()
-    except smtplib.SMTPException, emsg:
+    except smtplib.SMTPException as emsg:
       raise MailSendError(emsg)
-    except socket.error, emsg:
+    except socket.error as emsg:
       raise MailSendError(emsg)

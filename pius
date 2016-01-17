@@ -18,16 +18,18 @@ them to the respective emails."""
 # TODO:
 #   - Offer ability to "pick up where we left off"
 #
+from __future__ import print_function
 
-from libpius import signer as psigner
+import sys
+from optparse import OptionParser
+
 from libpius import mailer as pmailer
-from libpius.state import SignState
+from libpius import signer as psigner
+from libpius import util
 from libpius.constants import *
 from libpius.exceptions import *
-from libpius import util
-from optparse import OptionParser
-import os
-import sys
+from libpius.state import SignState
+
 
 def print_default_email(no_mime):
   '''Print the default email that is sent out.'''
@@ -39,17 +41,18 @@ def print_default_email(no_mime):
     '  %(keyid)s %(signer)s and %(email)s in the body and they will be\n'
     '  replaced with the relevant strings.\n'
   )
-  print '  DEFAULT EMAIL TEXT:\n'
+  print('  DEFAULT EMAIL TEXT:\n')
   if not no_mime:
-    print DEFAULT_MIME_EMAIL_TEXT % interpolation_dict
+      print(DEFAULT_MIME_EMAIL_TEXT % interpolation_dict)
   else:
-    print DEFAULT_NON_MIME_EMAIL_TEXT % interpolation_dict
+      print(DEFAULT_NON_MIME_EMAIL_TEXT % interpolation_dict)
+
 
 def check_options(parser, options, args):
   '''Given the parsed options, sanity check them.'''
 
   if options.debug == True:
-    print 'Setting debug'
+    print('Setting debug')
     util.DEBUG_ON = True
 
   if not os.path.exists(options.gpg_path):
@@ -70,11 +73,11 @@ def check_options(parser, options, args):
     parser.error('The -A options requires the -r option')
 
   if options.mail and options.mail_no_pgp_mime and not options.encrypt_outfiles:
-    print 'NOTE: -O and -m are present, turning on -e'
+    print('NOTE: -O and -m are present, turning on -e')
     options.encrypt_outfiles = True
 
   if options.mail_user and not options.mail_tls:
-    print 'NOTE: -u is present, turning off -S.'
+    print('NOTE: -u is present, turning off -S.')
     options.mail_tls = True
 
   if options.mail_text and not options.mail:
@@ -85,7 +88,7 @@ def check_options(parser, options, args):
       parser.error('%s exists but isn\'t a directory. It must not exist or be\n'
                    'a directory.' % mydir)
     if not os.path.exists(mydir):
-      os.mkdir(mydir, 0700)
+      os.mkdir(mydir, 0o700)
 
 def warn_if_short_keyids(ids):
   for keyid in ids:
@@ -96,7 +99,7 @@ def warn_if_short_keyids(ids):
       if ans == 'I understand':
         return
       else:
-        print 'ERROR: Danger not acknowledged, exiting.'
+        print('ERROR: Danger not acknowledged, exiting.')
         sys.exit(1)
 
 def warn_for_gpg1():
@@ -197,7 +200,7 @@ def main():
   all_opts.extend(sys.argv[1:])
   (options, args) = parser.parse_args(all_opts)
 
-  print 'Welcome to PIUS, the PGP Individual UID Signer.\n'
+  print('Welcome to PIUS, the PGP Individual UID Signer.\n')
 
   # The easy thing first...
   if options.print_default_email:
@@ -216,7 +219,7 @@ def main():
       ans = raw_input('What email address should we send from? ')
       util.check_email(parser, '-m', ans)
       options.mail = ans
-      print
+      print()
 
   if options.mail:
     mailer = pmailer.PiusMailer(
@@ -252,7 +255,7 @@ def main():
 
   if signer.gpg2:
     if options.mode != MODE_AGENT:
-      print "ERROR: gpg2 requires using an agent\n"
+      print("ERROR: gpg2 requires using an agent\n")
       sys.exit(1)
   else:
     warn_for_gpg1()
@@ -260,7 +263,7 @@ def main():
   if options.all_keys:
     key_list = signer.get_all_keyids()
     if len(key_list) == 0:
-      print "ERROR: Failed to find keys on this keyring\n"
+      print("ERROR: Failed to find keys on this keyring\n")
       sys.exit(1)
     if args:
       key_list.extend(args)
@@ -269,11 +272,11 @@ def main():
     key_list = args
 
   if options.mode == MODE_CACHE_PASSPHRASE:
-    print 'NOTE: See the README about security implications.'
+    print('NOTE: See the README about security implications.')
     while True:
       signer.get_passphrase()
       if not signer.verify_passphrase():
-        print 'Sorry, cannot unlock the key with that passphrase, try again.'
+          print('Sorry, cannot unlock the key with that passphrase, try again.')
       else:
         break
 
@@ -282,12 +285,12 @@ def main():
       mailer.get_pass()
       try:
         if not mailer.verify_pass():
-          print ('Sorry, cannot authenticate to %s as %s with that password,'
-                 ' try again.' % (options.mail_host, options.mail_user))
+          print('Sorry, cannot authenticate to %s as %s with that password,'
+                ' try again.' % (options.mail_host, options.mail_user))
         else:
           break
-      except MailSendError, msg:
-        print ('There was a problem talking to the mail server (%s): %s'
+      except MailSendError as msg:
+        print('There was a problem talking to the mail server (%s): %s'
                % (options.mail_host, msg))
         sys.exit(1)
 
@@ -297,16 +300,16 @@ def main():
     retval = signer.check_fingerprint(key)
     if retval == False:
       continue
-    print 'Signing all UIDs on key %s' % key
+    print('Signing all UIDs on key %s' % key)
     if signer.sign_all_uids(key, retval):
       signed_keys[key] = True
-    print ''
+    print('')
 
   # If the user asked, import the keys
   if options.import_keyring:
     if (not options.keyring) or (options.keyring == DEFAULT_KEYRING):
-      print ('WARNING: Ignoring -i: Either -r wasn\'t specified, or it was'
-             ' the same as the default keyring.')
+      print('WARNING: Ignoring -i: Either -r wasn\'t specified, or it was'
+            ' the same as the default keyring.')
     else:
       signer.import_unsigned_keys()
 

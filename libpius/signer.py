@@ -1,15 +1,16 @@
 '''The bulk of PIUS - al the magic to do individual UID signing.'''
 
 # vim:shiftwidth=2:tabstop=2:expandtab:textwidth=80:softtabstop=2:ai:
+from __future__ import print_function
+
+import getpass
+import re
+import sys
+import subprocess
 
 from libpius.util import debug, clean_files, logcmd
 from libpius.constants import *
 from libpius.exceptions import *
-import getpass
-import os
-import re
-import subprocess
-import sys
 
 
 class PiusSigner(object):
@@ -112,7 +113,7 @@ class PiusSigner(object):
         v = m.group(1)
 
     if not v:
-      print "ERROR: Could not determine gpg version\n"
+      print("ERROR: Could not determine gpg version\n")
       sys.exit(1)
 
     return v.startswith('2.')
@@ -175,7 +176,7 @@ class PiusSigner(object):
     return keyids
 
   def _print_cert_levels(self):
-    print CERT_LEVEL_INFO
+    print(CERT_LEVEL_INFO)
 
   def check_fingerprint(self, key):
     '''Prompt the user to see if they have verified this fingerprint.'''
@@ -194,30 +195,30 @@ class PiusSigner(object):
     output = output.strip()
     retval = gpg.wait()
     if retval != 0:
-      print 'WARNING: Keyid %s not valid, skipping.' % key
+      print('WARNING: Keyid %s not valid, skipping.' % key)
       return False
 
-    print output
+    print(output)
 
     while True:
       ans = raw_input("\nHave you verified this user/key, and if so, what level"
                       " do you want to sign at?\n  0-3, Show again, Next, Help,"
                       " or Quit? [0|1|2|3|s|n|h|q] (default: n) ")
-      print
+      print()
 
       if ans == 'y':
-        print ('"Yes" is no longer a valid answer, please specify a level to'
+        print('"Yes" is no longer a valid answer, please specify a level to'
                ' sign at.')
       elif ans in ('n', 'N', ''):
         return False
       elif ans in ('s', 'S'):
-        print output
+        print(output)
       elif ans in ('0', '1', '2', '3'):
         return ans
       elif ans in ('?', 'h', 'H'):
         self._print_cert_levels()
       elif ans in ('q', 'Q'):
-        print 'Dying at user request'
+        print('Dying at user request')
         sys.exit(1)
 
   def get_passphrase(self):
@@ -550,7 +551,7 @@ class PiusSigner(object):
     gpg.sendline('sign')
     line = gpg.readline()
     if 'already signed' in line:
-      print '  UID already signed'
+      print('  UID already signed')
       return False
     # else it's a blank line...
 
@@ -559,12 +560,12 @@ class PiusSigner(object):
     gpg.sendline('y')
     # Tell the user how to get out of this, and then drop them into the gpg
     # shell.
-    print '\n\nPassing you to gpg for passphrase.'
-    print 'Hit ^] after succesfully typing in your passphrase'
+    print('\n\nPassing you to gpg for passphrase.')
+    print('Hit ^] after succesfully typing in your passphrase')
     gpg.interact()
     # When we return, we have a Command> prompt that w can't
     # 'expect'... or at least if the user did it right
-    print ''
+    print('')
     # Unselect this UID
     debug('unselecting uid')
     debug('Saving key')
@@ -634,7 +635,7 @@ class PiusSigner(object):
       line = gpg.stdout.readline()
       debug('Got %s' % line)
       if PiusSigner.GPG_ALREADY_SIGNED in line:
-        print '  UID already signed'
+        print('  UID already signed')
         gpg.stdin.write('quit\n')
         return False
       elif PiusSigner.GPG_KEY_CONSIDERED in line:
@@ -649,17 +650,17 @@ class PiusSigner(object):
         # Unfortunately PGP doesn't give us anything parsable in this case. It
         # just gives us another prompt. We give the most likely problem. Best we
         # can do.
-        print ('  ERROR: GnuPG won\'t let us sign, this probably means it'
-               ' can\'t find a secret key, which most likely means that the'
-               ' keyring you are using doesn\'t have _your_ _public_ key on'
-               ' it.')
+        print('  ERROR: GnuPG won\'t let us sign, this probably means it'
+              ' can\'t find a secret key, which most likely means that the'
+              ' keyring you are using doesn\'t have _your_ _public_ key on'
+              ' it.')
         gpg.stdin.write('quit\n')
         raise NoSelfKeyError
       elif PiusSigner.GPG_CONFIRM in line:
         # This is what we want
         break
       else:
-        print '  ERROR: GnuPG reported an unknown error'
+        print('  ERROR: GnuPG reported an unknown error')
         gpg.stdin.write('quit\n')
         # Don't raise an exception, it's not probably just this UID...
         return False
@@ -693,10 +694,10 @@ class PiusSigner(object):
       #
       # gpg2.1 + gpgagent2.1 seems to just do ERROR
       if 'ERROR' in line:
-        print '  ERROR: Agent reported an error.'
+        print('  ERROR: Agent reported an error.')
         raise AgentError
       if 'MISSING_PASSPHRASE' in line:
-        print '  ERROR: Agent didn\'t provide passphrase to PGP.'
+        print('  ERROR: Agent didn\'t provide passphrase to PGP.')
         raise AgentError
       if 'BAD_PASSPHRASE' in line:
         if self.mode == MODE_AGENT:
@@ -704,17 +705,17 @@ class PiusSigner(object):
           debug('Got %s' % line)
           if 'USERID_HINT' in line:
             continue
-          print '  ERROR: Agent reported the passphrase was incorrect.'
+          print('  ERROR: Agent reported the passphrase was incorrect.')
           raise AgentError
         else:
-          print '  ERROR: GPG didn\'t accept the passphrase.'
+          print('  ERROR: GPG didn\'t accept the passphrase.')
           raise PassphraseError
       if 'GOOD_PASSPHRASE' in line:
         break
       if PiusSigner.GPG_PROMPT in line:
         if self.gpg2:
           break;
-        print '  ERROR: GPG didn\'t sign.'
+        print('  ERROR: GPG didn\'t sign.')
         raise GpgUnknownError(line)
 
     debug('Saving key')
@@ -727,32 +728,32 @@ class PiusSigner(object):
 
   def print_filenames(self, uids):
     '''Print the filenames we created for the user.'''
-    print '  Signed UNencrypted keys: '
+    print('  Signed UNencrypted keys: ')
     for uid in uids:
       if uid['status'] != 'r' and uid['result']:
-        print '    %(id)s: %(file)s' % uid
+        print('    %(id)s: %(file)s' % uid)
     if self.encrypt_outfiles:
-      print '  Signed encrypted keys: '
+      print('  Signed encrypted keys: ')
       for uid in uids:
         if uid['status'] != 'r' and uid['result']:
-          print '    %(id)s: %(enc_file)s' % uid
+          print('    %(id)s: %(enc_file)s' % uid)
 
   def sign_all_uids(self, key, level):
     '''The main function that signs all the UIDs on a given key.'''
     signed_any_uids = False
     uids = self.get_uids(key)
-    print '  There %s %s UID%s on this key to sign' % (
-        ['is', 'are'][len(uids) != 1], len(uids), "s"[len(uids) == 1:]
-    )
+    print('  There %s %s UID%s on this key to sign' % (
+      ['is', 'are'][len(uids) != 1], len(uids), "s"[len(uids) == 1:]
+    ))
 
     # From the user key ring make a clean copy
     self.export_clean_key(key)
     for uid in uids:
       if uid['status'] == 'r':
-        print '  Skipping revoked uid %s' % uid['index']
+        print('  Skipping revoked uid %s' % uid['index'])
         continue
       elif uid['status'] == 'e':
-        print '  Skipping expired uid %s' % uid['index']
+        print('  Skipping expired uid %s' % uid['index'])
         continue
       sys.stdout.write('  UID %s (%s): ' % (uid['index'], uid['id']))
 
@@ -766,14 +767,14 @@ class PiusSigner(object):
         try:
           res = self.sign_uid(key, uid['index'], level)
         except AgentError:
-          print '\ngpg-agent problems, bailing out!'
+          print('\ngpg-agent problems, bailing out!')
           sys.exit(1)
         except PassphraseError:
-          print ('\nThe passphrase that worked a moment ago now doesn\'t work.'
+          print('\nThe passphrase that worked a moment ago now doesn\'t work.'
                  ' I\'m bailing out!')
           sys.exit(1)
         except NoSelfKeyError:
-          print '\nWe don\'t have our own key, according to GnuPG.'
+          print('\nWe don\'t have our own key, according to GnuPG.')
           # No need to say anything else
           sys.exit(1)
       else:
@@ -796,7 +797,7 @@ class PiusSigner(object):
           )
           sys.stdout.write(', encrypted')
         except EncryptionKeyError:
-          print ('\nEncryption failed due to invalid key error. User may not'
+          print('\nEncryption failed due to invalid key error. User may not'
                  ' have an encryption subkey or it may be expired.')
           uid['enc_file'] = None
           # If we can't encrypt, we don't want to mail - even if we're using
@@ -810,19 +811,19 @@ class PiusSigner(object):
       if self.mail:
         try:
           if uid['email'] == None:
-            print '  WARNING: No email for %s, cannot send key.' % uid['id']
+            print('  WARNING: No email for %s, cannot send key.' % uid['id'])
             continue
           # this is a ugly. The mailer needs to be able to be able to call
           # encrypt_and_sign_file() to be able to generate the PGP/MIME file,
           # so we pass outselves, it can call it...
           self.mailer.send_sig_mail(self.signer, key, uid, self)
           sys.stdout.write(', mailed')
-        except MailSendError, msg:
-          print ('\nThere was a problem talking to the mail server (%s): %s'
+        except MailSendError as msg:
+          print('\nThere was a problem talking to the mail server (%s): %s'
                  % (self.mail_host, msg))
 
       # add a newline to all the sys.stdout.write()s
-      print ''
+      print('')
 
       # remove the signed file, if it exists (it might not, if it's
       # expired, the user chose not to sign it, etc.)
@@ -841,7 +842,7 @@ class PiusSigner(object):
 
   def import_unsigned_keys(self):
     '''Import all the unsigned keys from keyring to main keyring.'''
-    print 'Importing keyring...'
+    print('Importing keyring...')
     cmd = [self.gpg] + self.gpg_base_opts + self.gpg_quiet_opts + [
         '--import', self.keyring,
     ]

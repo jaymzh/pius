@@ -10,6 +10,7 @@
 #   modify it under the terms of the GNU General Public License as
 #   published by the Free Software Foundation, version 2.
 #
+from __future__ import print_function
 
 import email
 import mailbox
@@ -21,8 +22,8 @@ import smtplib
 import subprocess
 import sys
 
-from libpius.constants import VERSION
 from libpius import util
+from libpius.constants import VERSION
 
 BADKEYS_RE = re.compile(r'00000000|12345678|no pgp key')
 LIST_SEP_RE = re.compile(r'\s*,\s*')
@@ -72,12 +73,14 @@ def print_default_email():
                         'keyserver': '<example_keyserver>',
                         'keyservers': '<keyserver_list>',
                         'fp': '<fingerprint>'}
-  print 'DEFAULT EMAIL TEXT:\n'
-  print DEFAULT_EMAIL_TEXT % interpolation_dict
+  print('DEFAULT EMAIL TEXT:\n')
+  print(DEFAULT_EMAIL_TEXT % interpolation_dict)
+
 
 def keyid_from_fp(fp):
   '''Given a fingerprint without whitespace, returns keyid.'''
   return fp[24:40]
+
 
 def parse_csv(filename, sep, name_field, email_field, fp_field, ignore_emails,
               ignore_fps):
@@ -109,6 +112,7 @@ def parse_csv(filename, sep, name_field, email_field, fp_field, ignore_emails,
                  'keyid': keyid,
                  'fingerprint': fp})
   return keys
+
 
 def parse_mbox(filename):
   '''Parse an mbox for name, email, fingerprints and keys.
@@ -165,7 +169,7 @@ def parse_mbox(filename):
           tmp.update({'fingerprint': fp, 'keyid': keyid})
           keys.append(tmp)
           fp = 'wonk'
-  print ("Found %s keys in mbox: %s fingerprints and %s full keys" %
+  print("Found %s keys in mbox: %s fingerprints and %s full keys" %
          (len(keys), num_fps, num_keys))
   return keys
 
@@ -223,7 +227,7 @@ class KeyringBuilder(object):
     for line in gpg.stdout:
       parts = line.strip().split(' ')
       if parts[1] == 'IMPORTED':
-        print 'Importing %s (%s)' % (parts[2][8:16], ' '.join(parts[3:]))
+          print('Importing %s (%s)' % (parts[2][8:16], ' '.join(parts[3:])))
 
     gpg.wait()
     retval = gpg.returncode
@@ -244,7 +248,7 @@ class KeyringBuilder(object):
   def _print_list(self, keylist):
     '''Helper function for print_report.'''
     for key in keylist:
-      print ('  %s <%s>\n    %s' %
+      print('  %s <%s>\n    %s' %
              (key['name'], key['email'],
               self._printable_fingerprint(key['fingerprint'])))
 
@@ -274,7 +278,7 @@ Subject: %(party)sPGP Keysignign Party: Can't find your key!''' % interp
     if override_email:
       eto = override_email
 
-    print "Sending mail to %s" % eto
+    print("Sending mail to %s" % eto)
     smtp = smtplib.SMTP('localhost', '587')
     smtp.ehlo()
     smtp.sendmail(efrom, eto, body)
@@ -290,7 +294,7 @@ Subject: %(party)sPGP Keysignign Party: Can't find your key!''' % interp
     gpg.wait()
     retval = gpg.returncode
     if retval == 0:
-      print 'Already have %s' % key
+      print('Already have %s' % key)
       return True
     return False
 
@@ -310,10 +314,10 @@ Subject: %(party)sPGP Keysignign Party: Can't find your key!''' % interp
       retval = gpg.returncode
       if retval == 0:
         found = True
-        print 'Found %s (%s)' % (key, ks)
+        print('Found %s (%s)' % (key, ks))
         break
     if not found:
-      print 'NOT Found %s' % key
+        print('NOT Found %s' % key)
 
     return found
 
@@ -323,8 +327,8 @@ Subject: %(party)sPGP Keysignign Party: Can't find your key!''' % interp
     for key in keys:
       if 'keyid' in key:
         if key['keyid'] == '':
-          print '%s has an old-style key (%s)' % (key['email'],
-                                                  key['fingerprint'])
+          print('%s has an old-style key (%s)' % (key['email'],
+                                                  key['fingerprint']))
           continue
         if key['keyid'] in attempted_keyids:
           util.debug('Skipping %s, already processed' % key['keyid'])
@@ -343,9 +347,9 @@ Subject: %(party)sPGP Keysignign Party: Can't find your key!''' % interp
 
   def print_report(self):
     '''Print small report about what was and was not found.'''
-    print 'KEYS FOUND:'
+    print('KEYS FOUND:')
     self._print_list(self.found)
-    print 'KEYS NOT FOUND:'
+    print('KEYS NOT FOUND:')
     self._print_list(self.notfound)
 
   def send_emails(self, fromaddr, override_email, party, mail_text):
@@ -401,21 +405,21 @@ Subject: %(party)sPGP Keysignign Party: Can't find your key!''' % interp
       cmd = basecmd + [fp]
       gpg = subprocess.Popen(cmd, shell=False, stdout=subprocess.PIPE)
       for line in gpg.stdout:
-        print line.strip()
+          print(line.strip())
       ans = raw_input('Delete this key? (\'yes\' to delete, \'q\' to quit'
                       ' anything to skip) ')
       if ans in ('q', 'Q'):
-        print 'Dying at user request'
+        print('Dying at user request')
         sys.exit(1)
       if ans in ('yes', 'y'):
-        print "Deleting key ..."
+        print("Deleting key ...")
         cmd = basedelcmd + [fp]
         util.logcmd(cmd)
         subprocess.call(cmd)
-      print
+      print()
 
     backup = '%s-pius-backup' % self.keyring
-    print 'A backup file is in %s' % backup
+    print('A backup file is in %s' % backup)
 
   def raw(self, args):
     cmd = self.basecmd + args
@@ -450,8 +454,8 @@ def check_options(parser, mode, options):
                  'a directory.' % options.tmp_dir)
   if not os.path.exists(options.tmp_dir):
     try:
-      os.mkdir(options.tmp_dir, 0700)
-    except OSError, msg:
+      os.mkdir(options.tmp_dir, 0o700)
+    except OSError as msg:
       parser.error('%s was doesn\'t exist, and was unable to be created: %s'
                    % (options.tmp_dir, msg))
 
@@ -603,7 +607,7 @@ There are no options'''
 
   # all that's left is mode == 'build'
   if not mode == 'build':
-    print 'Unrecognized mode %s' % mode
+    print('Unrecognized mode %s' % mode)
     sys.exit(1)
 
   keys = []
@@ -617,7 +621,7 @@ There are no options'''
                           options.ignore_fps))
 
   if not keys:
-    print "No keys IDs extract from CSV"
+    print("No keys IDs extract from CSV")
     sys.exit(0)
 
   if keys:
