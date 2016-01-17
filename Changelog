@@ -1,3 +1,13 @@
+2.2.2
+Released: 1/17/15
+phil@ipom.com
+- Make output of -T clearer, add instructions to change default mail. Fixes #23.
+- Update pius.spec to handle build changes. Fixes #18.
+oleander@oleander.cc
+- Handle PINENTRY_LAUNCHED & PROGRESS.
+sebastian@karotte.org
+- add --force-signer option to force specific keyid for signing
+
 2.2.1
 Released: 10/08/15
 phil@ipom.com
