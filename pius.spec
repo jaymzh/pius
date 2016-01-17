@@ -1,6 +1,3 @@
-# Sample spec file.
-# $Id$
-
 %define name pius
 %define version	2.2.1
 %define release 1
@@ -14,6 +11,7 @@ License: GPLv2
 URL: http://www.phildev.net/pius/
 BuildRoot: %{_tmppath}/%{name}-buildroot
 Requires: python
+Source: %{name}-%{version}.tar.bz2
 
 %description
  The PGP Individual UID Signer (PIUS) is a tool for individually
@@ -25,8 +23,11 @@ Requires: python
 rm -rf $RPM_BUILD_ROOT
 %setup
 
+%build
+./setup.py build
+
 %install
-install PREFIX=$RPM_BUILD_ROOT/usr
+./setup.py install --prefix=$RPM_BUILD_ROOT/usr
 
 %clean
 rm -rf $RPM_BUILD_ROOT
@@ -36,5 +37,7 @@ rm -rf $RPM_BUILD_ROOT
 /usr/bin/%{name}
 /usr/bin/%{name}-keyring-mgr
 /usr/bin/%{name}-party-worksheet
-%doc README README.keyring-mgr COPYING
-
+/usr/bin/%{name}-report
+/usr/lib/python*/site-packages/%{name}-%{version}-*egg-info
+%attr(644, root, bin) /usr/lib/python*/site-packages/libpius/*
+%doc README.md README-keyring-mgr.md README-report.md COPYING
