@@ -31,15 +31,18 @@ import sys
 
 def print_default_email(no_mime):
   '''Print the default email that is sent out.'''
-  interpolation_dict = {'keyid': '<keyid>', 'signer': '<signer>',
-                        'email': '<email>'}
-  print 'DEFAULT EMAIL TEXT:\n'
+  interpolation_dict = {'keyid': '[KEYID]', 'signer': '[SIGNER]',
+                        'email': '[EMAIL]'}
+  print(
+    '  The default email text is below. To specify your own, simply use\n'
+    '  %(keyid) %(signer) and %(email) in the body and they will be\n'
+    '  replaced with the relevant strings.\n'
+  )
+  print '  DEFAULT EMAIL TEXT:\n'
   if not no_mime:
     print DEFAULT_MIME_EMAIL_TEXT % interpolation_dict
   else:
     print DEFAULT_NON_MIME_EMAIL_TEXT % interpolation_dict
-
-
 
 def check_options(parser, options, args):
   '''Given the parsed options, sanity check them.'''
