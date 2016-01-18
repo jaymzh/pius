@@ -96,4 +96,3 @@ are taken from the GnuPG man page.
 Note that the examples given above for levels 2 and 3 are just that: examples.
 In the end, it is up to you to decide just what "casual" and "extensive" mean to
 you.'''
-

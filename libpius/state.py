@@ -2,8 +2,9 @@
 from __future__ import print_function
 
 import json
+import os
 
-from libpius.constants import *
+from libpius.constants import PIUS_HOME
 
 
 class SignState(object):
@@ -69,7 +70,7 @@ class SignState(object):
       os.mkdir(PIUS_HOME, 0o750)
     if not os.path.isdir(PIUS_HOME):
       print('WARNING: There is a ~/.pius which is not a directory.'
-             ' Not storing state.')
+            ' Not storing state.')
       return
     fp = open(SignState.kPIUS_SIGNED_KEYS, 'w')
     fp.write(json.dumps(result))

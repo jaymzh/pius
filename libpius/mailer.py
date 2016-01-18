@@ -1,17 +1,21 @@
 # vim:shiftwidth=2:tabstop=2:expandtab:textwidth=80:softtabstop=2:ai:
 import getpass
+import os
 import smtplib
 import socket
 
-from email import message
-from email import MIMEBase
-from email import MIMEMultipart
-from email import MIMEText
-from email import quopriMIME
-from email.Utils import formatdate
+from email import message, quoprimime
+from email.utils import formatdate
 
-from libpius.exceptions import *
-from libpius.constants import *
+from six.moves import (
+  email_mime_multipart, email_mime_text, email_mime_base,
+)
+
+from libpius.constants import (
+  DEFAULT_MAIL_HOST, DEFAULT_MAIL_PORT, DEFAULT_MIME_EMAIL_TEXT,
+  DEFAULT_NON_MIME_EMAIL_TEXT,
+)
+from libpius.exceptions import EncryptionKeyError, MailSendError
 from libpius.util import clean_files, debug
 
 
@@ -118,27 +122,27 @@ class PiusMailer(object):
 
     The message headers MUST be added by the caller.'''
 
-    msg = MIMEMultipart.MIMEMultipart(
+    msg = email_mime_multipart(
         'encrypted', micalg="pgp-sha1", protocol="application/pgp-encrypted"
     )
     msg.preamble = 'This is an OpenPGP/MIME signed message (RFC 2440 and 3156)'
 
     # The signed part of the message. This is a MIME encapsulation
     # of the main body of the message *and* the key.
-    encrypted_body = MIMEMultipart.MIMEMultipart('mixed')
+    encrypted_body = email_mime_multipart('mixed')
 
     # First part of signed body
-    textpart = MIMEBase.MIMEBase('text', 'plain', charset="ISO-8859-1")
+    textpart = email_mime_base('text', 'plain', charset="ISO-8859-1")
     textpart.add_header('Content-Transfer-Encoding', 'quoted-printable')
     textpart.__delitem__('MIME-Version')
-    textpart.set_payload(quopriMIME.encode(
+    textpart.set_payload(quoprimime.encode(
         self._get_email_body(signer, keyid, email)
     ))
     encrypted_body.attach(textpart)
 
     # The second part of the signed body
     file_base = os.path.basename(filename)
-    attached_sig = MIMEBase.MIMEBase('application', 'pgp-keys',
+    attached_sig = email_mime_base('application', 'pgp-keys',
                                      name='%s' % file_base)
     attached_sig.add_header('Content-Disposition', 'inline',
                             filename='%s' % file_base)
@@ -154,7 +158,7 @@ class PiusMailer(object):
     # never available for an MTA to mess with, so this ... should be safe, and
     # allows both methods of decrypting and importing the key.
     #
-    # Side-note, if we ever turn to QP, be sure to use quopriMIME.encode to
+    # Side-note, if we ever turn to QP, be sure to use quoprimime.encode to
     # encode the payload.
     #
     attached_sig.set_payload(open(filename, 'r').read())
@@ -179,13 +183,13 @@ class PiusMailer(object):
       raise EncryptionKeyError
 
     # Create the version part of the PGP/Mime encryption
-    pgp_ver = MIMEBase.MIMEBase('application', 'pgp-encrypted')
+    pgp_ver = email_mime_base('application', 'pgp-encrypted')
     pgp_ver.add_header('Content-Description', 'PGP/MIME version identification')
     pgp_ver.__delitem__('MIME-Version')
     pgp_ver.set_payload('Version: 1\n')
 
     # Create the big sign-encrypted body part
-    pgp_data = MIMEBase.MIMEBase('application', 'octet-stream',
+    pgp_data = email_mime_base('application', 'octet-stream',
                                  name='encrypted.asc')
     pgp_data.add_header('Content-Description', 'OpenPGP encrypted message')
     pgp_data.add_header('Content-Disposition', 'inline',
@@ -202,13 +206,13 @@ class PiusMailer(object):
 
   def _generate_non_pgp_mime_email(self, signer, email, keyid, filename):
     '''Send the encrypted uid off to the user.'''
-    msg = MIMEMultipart.MIMEMultipart()
+    msg = email_mime_multipart()
     msg.epilogue = ''
 
-    part = MIMEText.MIMEText(self._get_email_body(signer, keyid, email))
+    part = email_mime_text(self._get_email_body(signer, keyid, email))
     msg.attach(part)
 
-    part = MIMEBase.MIMEBase('application', 'octet-stream')
+    part = email_mime_base('application', 'octet-stream')
     part.add_header('Content-Disposition', 'inline; filename="%s"' %
                     os.path.basename(filename))
     part.set_payload(open(filename, 'r').read())

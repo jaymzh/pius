@@ -4,13 +4,21 @@
 from __future__ import print_function
 
 import getpass
+import os
 import re
 import sys
 import subprocess
 
+from six.moves import input
+
 from libpius.util import debug, clean_files, logcmd
-from libpius.constants import *
-from libpius.exceptions import *
+from libpius.constants import (
+  CERT_LEVEL_INFO, MODE_AGENT, MODE_CACHE_PASSPHRASE, MODE_INTERACTIVE
+)
+from libpius.exceptions import (
+  AgentError, EncryptionKeyError, EncryptionUnknownError, GpgUnknownError,
+  MailSendError, NoSelfKeyError, PassphraseError
+)
 
 
 class PiusSigner(object):
@@ -89,6 +97,7 @@ class PiusSigner(object):
         global quote
         from pipes import quote
       except ImportError:
+        # FIXME: parser is not passed to class
         parser.error('You chose interactive mode but do not have the pexpect'
                      ' module installed.')
 
@@ -201,9 +210,9 @@ class PiusSigner(object):
     print(output)
 
     while True:
-      ans = raw_input("\nHave you verified this user/key, and if so, what level"
-                      " do you want to sign at?\n  0-3, Show again, Next, Help,"
-                      " or Quit? [0|1|2|3|s|n|h|q] (default: n) ")
+      ans = input("\nHave you verified this user/key, and if so, what level"
+                  " do you want to sign at?\n  0-3, Show again, Next, Help,"
+                  " or Quit? [0|1|2|3|s|n|h|q] (default: n) ")
       print()
 
       if ans == 'y':

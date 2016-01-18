@@ -20,14 +20,21 @@ them to the respective emails."""
 #
 from __future__ import print_function
 
+import os
 import sys
 from optparse import OptionParser
+
+from six.moves import input
 
 from libpius import mailer as pmailer
 from libpius import signer as psigner
 from libpius import util
-from libpius.constants import *
-from libpius.exceptions import *
+from libpius.constants import (
+    DEFAULT_GPG_PATH, DEFAULT_KEYRING, DEFAULT_MIME_EMAIL_TEXT,
+    DEFAULT_NON_MIME_EMAIL_TEXT, DEFAULT_OUT_DIR, DEFAULT_TMP_DIR,
+    MODE_AGENT, MODE_CACHE_PASSPHRASE, MODE_INTERACTIVE, VERSION
+)
+from libpius.exceptions import MailSendError
 from libpius.state import SignState
 
 
@@ -95,7 +102,7 @@ def warn_if_short_keyids(ids):
     if len(keyid) == 8:
       print('WARNING: You passed in short keyids. Short keyids are forgable'
             ' and should be avoided.')
-      ans = raw_input('Type "I understand" to continue: ')
+      ans = input('Type "I understand" to continue: ')
       if ans == 'I understand':
         return
       else:
@@ -212,11 +219,11 @@ def main():
 
   # Check to see if the user wants to send email if they didn't specify
   if not options.mail:
-    ans = raw_input('Would you like to automatically send the signed UIDs to'
+    ans = input('Would you like to automatically send the signed UIDs to'
                     ' their owners using\nPGP/Mime encryption as you sign each'
                     ' one? ')
     if ans in ('y', 'Y', 'yes', 'YES', 'Yes'):
-      ans = raw_input('What email address should we send from? ')
+      ans = input('What email address should we send from? ')
       util.check_email(parser, '-m', ans)
       options.mail = ans
       print()

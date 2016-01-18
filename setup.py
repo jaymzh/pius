@@ -6,5 +6,6 @@ setup(
   name='pius',
   version=constants.VERSION,
   packages=['libpius'],
+  requires=['six'],
   scripts=['pius', 'pius-keyring-mgr', 'pius-party-worksheet', 'pius-report'],
 )

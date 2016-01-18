@@ -3,10 +3,12 @@
 # vim:shiftwidth=2:tabstop=2:expandtab:textwidth=80:softtabstop=2:ai:
 from __future__ import print_function
 
+import os
 import re
 from copy import copy
-from libpius.constants import *
 from optparse import Option, OptionValueError
+
+from libpius.constants import PIUS_HOME, PIUS_RC
 
 DEBUG_ON = False
 VALID_OPTIONS = [
@@ -132,4 +134,3 @@ class MyOption(Option):
   })
 
 # END Stupid python optparse hack.
-

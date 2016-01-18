@@ -22,6 +22,8 @@ import smtplib
 import subprocess
 import sys
 
+from six.moves import input
+
 from libpius import util
 from libpius.constants import VERSION
 
@@ -406,7 +408,7 @@ Subject: %(party)sPGP Keysignign Party: Can't find your key!''' % interp
       gpg = subprocess.Popen(cmd, shell=False, stdout=subprocess.PIPE)
       for line in gpg.stdout:
           print(line.strip())
-      ans = raw_input('Delete this key? (\'yes\' to delete, \'q\' to quit'
+      ans = input('Delete this key? (\'yes\' to delete, \'q\' to quit'
                       ' anything to skip) ')
       if ans in ('q', 'Q'):
         print('Dying at user request')
