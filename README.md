@@ -41,7 +41,7 @@ And more! See the '-h' option for more.
 The default mode for PIUS, starting in 2.2.0 is `agent` mode. If you
 are using gpg2 this is the only valid mode.
 
-If you are using gpg2, there are some other options. If you use
+If you aren't using gpg2, there are some other options. If you use
 `cache_passphrase` mode. This means that PIUS will ask you for your passphrase
 at startup, verify this passphrase is correct, and then feed it GnuPG everytime
 it needs it. The passphrase is stored in memory and only for the life of the
