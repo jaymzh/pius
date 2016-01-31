@@ -104,7 +104,7 @@ def warn_for_gpg1():
     "\n"
     "!! WARNING: You are using GnuPG 1.x. Support for the 1.x series will be !!"
     "\n"
-    "!!          dropped in the next release, please migrated to GnuPG 2.x.  !!"
+    "!!          dropped in the next release, please migrate to GnuPG 2.x.   !!"
     "\n"
     "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
     "\n"
