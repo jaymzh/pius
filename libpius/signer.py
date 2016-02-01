@@ -707,7 +707,7 @@ class PiusSigner(object):
       print '  Signed encrypted keys: '
       for uid in uids:
         if uid['status'] != 'r' and uid['result']:
-          print '    %(id)s: %(enc_file)s' % uids
+          print '    %(id)s: %(enc_file)s' % uid
 
   def sign_all_uids(self, key, level):
     '''The main function that signs all the UIDs on a given key.'''

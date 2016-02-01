@@ -1,3 +1,8 @@
+Unreleased
+Released:
+phil@ipom.com
+- Fix crash in `-e` mode. Fixes #28.
+
 2.2.2
 Released: 1/17/15
 phil@ipom.com
