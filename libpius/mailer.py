@@ -3,6 +3,7 @@ import getpass
 import os
 import smtplib
 import socket
+import os
 
 from email import message, quoprimime
 from email.utils import formatdate
@@ -21,7 +22,7 @@ from libpius.util import clean_files, debug
 
 class PiusMailer(object):
   def __init__(self, mail, display_name, host, port, user, tls, no_mime,
-               override, msg_text, tmp_dir):
+               override, msg_text, tmp_dir, local_mail_dir):
     self.mail = mail
     self.display_name = display_name
     self.host = host
@@ -33,6 +34,7 @@ class PiusMailer(object):
     self.address_override = override
     self.message_text = msg_text
     self.tmp_dir = tmp_dir
+    self.local_mail_dir = local_mail_dir
 
   @staticmethod
   def add_options(parser):
@@ -258,36 +260,42 @@ class PiusMailer(object):
       msg['From'] = self.mail
     if self.address_override:
       msg['To'] = self.address_override
+      env_to = [msg['To']]
     else:
       msg['To'] = to
+      env_to = [msg['To'], self.mail]
     msg['Date'] = formatdate(localtime=True)
 
-    try:
-      smtp = smtplib.SMTP(self.host, self.port)
-      if self.tls:
-        # NOTE WELL: SECURITY IMPORTANT NOTE!
-        # In python 2.6 if you attempt to starttls() and the server doesn't
-        # understand an exception is raised. However before that, it just
-        # carried on and one could attempt to auth over a plain-text session.
-        # This is BAD!
-        #
-        # So, in order be secure on older pythons we ehlo() and then check the
-        # response before attempting startls.
-        smtp.ehlo()
-        if not smtp.has_extn('STARTTLS'):
-          # Emulate 2.6 behavior
-          raise smtplib.SMTPException('Server does not support STARTTLS')
-        smtp.starttls()
-        # must re-ehlo after STARTTLS
-        smtp.ehlo()
-        # Don't want to send auth information unless we're TLS'd
-        if self.user:
-          smtp.login(self.user, self.password)
-      if self.address_override:
-        env_to = self.address_override
-      else:
-        # BCC the user...
-        env_to = [msg['To'], self.mail]
+    if self.local_mail_dir:
+      if not os.path.isdir(self.local_mail_dir):
+        os.mkdir(self.local_mail_dir)
+      if not self.address_ovrride:
+        msg['Bcc'] = self.mail
+      email = open(os.path.join(self.local_mail_dir, msg['To']), 'w')
+      email.write(str(msg))
+      email.close()
+    else:
+      try:
+        smtp = smtplib.SMTP(self.host, self.port)
+        if self.tls:
+          # NOTE WELL: SECURITY IMPORTANT NOTE!
+          # In python 2.6 if you attempt to starttls() and the server doesn't
+          # understand an exception is raised. However before that, it just
+          # carried on # and one could attempt to auth over a plain-text session.
+          # This is BAD!
+          #
+          # So, in order be secure on older pythons we ehlo() and then check the
+          # response before attempting startls.
+          smtp.ehlo()
+          if not smtp.has_extn('STARTTLS'):
+            # Emulate 2.6 behavior
+            raise smtplib.SMTPException('Server does not support STARTTLS')
+          smtp.starttls()
+          # must re-ehlo after STARTTLS
+          smtp.ehlo()
+          # Don't want to send auth information unless we're TLS'd
+          if self.user:
+            smtp.login(self.user, self.password)
 
       smtp.sendmail(self.mail, env_to, msg.as_string())
       smtp.quit()
