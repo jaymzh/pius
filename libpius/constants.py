@@ -24,7 +24,7 @@ DEFAULT_MIME_EMAIL_TEXT = '''Hello,
 Attached is a copy of your PGP key (0x%(keyid)s) signed by my key
 (0x%(signer)s).
 
-If your key has more than one UID, than this key only has the UID associated
+If your key has more than one UID, then this key only has the UID associated
 with this email address (%(email)s) signed and you will receive
 additional emails containing signatures of the other UIDs at the respective
 email addresses.
@@ -51,7 +51,7 @@ DEFAULT_NON_MIME_EMAIL_TEXT = '''Hello,
 Attached is a copy of your PGP key (0x%(keyid)s) signed by my key
 (0x%(signer)s).
 
-If your key has more than one UID, than this key only has the UID associated
+If your key has more than one UID, then this key only has the UID associated
 with this email address (%(email)s) signed and you will receive
 additional emails containing signatures of the other UIDs at the respective
 email addresses.
