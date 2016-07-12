@@ -306,7 +306,7 @@ def main():
       mailer.get_pass()
       try:
         if not mailer.verify_pass():
-          print ('Sorry, cannot authenticate to %s as %s with that passwword,'
+          print ('Sorry, cannot authenticate to %s as %s with that password,'
                  ' try again.' % (options.mail_host, options.mail_user))
         else:
           break
