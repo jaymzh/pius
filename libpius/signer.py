@@ -432,6 +432,9 @@ class PiusSigner(object):
         # we get a ENC_INV.
         debug('Got GPG_KEY_EXP')
         continue
+      elif PiusSigner.GPG_PROGRESS in line:
+        debug('Got skippable stuff')
+        continue
       else:
         raise EncryptionUnknownError(line)
 
