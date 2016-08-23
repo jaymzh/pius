@@ -576,11 +576,11 @@ class PiusSigner(object):
     cmd = [self.gpg] + self.gpg_base_opts + self.gpg_quiet_opts + \
       self.gpg_fd_opts + keyring + [
           '-u', self.force_signer,
-      ] + agent + [
+      ] + agent + self.policy_opts() + [
           '--default-cert-level', level,
           '--no-ask-cert-level',
           '--edit-key', key,
-      ] + self.policy_opts()
+      ]  # NB: keep the `--edit-key <key>` at the very end of this list!
     logcmd(cmd)
     gpg = subprocess.Popen(cmd, stdin=subprocess.PIPE,
                            stdout=subprocess.PIPE,
