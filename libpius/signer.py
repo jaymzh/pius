@@ -557,7 +557,10 @@ class PiusSigner(object):
     line = ''
     while line not in (string,):
       debug('Waiting for line %s' % string)
-      line = fd.readline().strip()
+      raw_line = fd.readline()
+      if not raw_line:
+        raise GpgUnknownError('gpg output unexpectedly ended')
+      line = raw_line.strip()
       debug('got line %s' % line)
 
   def sign_uid(self, key, index, level):
