@@ -433,6 +433,9 @@ class PiusSigner(object):
         # we get a ENC_INV.
         debug('Got GPG_KEY_EXP')
         continue
+      elif PiusSigner.GPG_KEY_CONSIDERED in line:
+        debug('Got KEY_CONSIDERED')
+        continue
       elif PiusSigner.GPG_PROGRESS in line:
         debug('Got skippable stuff')
         continue
@@ -619,8 +622,8 @@ class PiusSigner(object):
         print '  UID already signed'
         gpg.stdin.write('quit\n')
         return False
-      elif (PiusSigner.GPG_KEY_CONSIDERED in line):
-        debug("Got KEY_CONSIDERED")
+      elif PiusSigner.GPG_KEY_CONSIDERED in line:
+        debug('Got KEY_CONSIDERED')
         continue
       elif (PiusSigner.GPG_KEY_EXP in line or
             PiusSigner.GPG_SIG_EXP in line):
@@ -877,8 +880,8 @@ class PiusSigner(object):
       elif PiusSigner.GPG_ENC_INV in line:
         debug('Got GPG_ENC_INV')
         raise EncryptionKeyError
-      elif (PiusSigner.GPG_KEY_CONSIDERED in line):
-        debug("Got KEY_CONSIDERED")
+      elif PiusSigner.GPG_KEY_CONSIDERED in line:
+        debug('Got KEY_CONSIDERED')
         continue
       elif (PiusSigner.GPG_KEY_EXP in line or
             PiusSigner.GPG_SIG_EXP in line):
