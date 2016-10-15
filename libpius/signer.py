@@ -34,6 +34,7 @@ class PiusSigner(object):
   GPG_SIG_CREATED = '[GNUPG:] SIG_CREATED'
   GPG_PROGRESS = '[GNUPG:] PROGRESS'
   GPG_PINENTRY_LAUNCHED = '[GNUPG:] PINENTRY_LAUNCHED'
+  GPG_KEY_CONSIDERED = '[GNUPG:] KEY_CONSIDERED'
 
   def __init__(self, signer, force_signer, mode, keyring, gpg_path, tmpdir,
                outdir, encrypt_outfiles, mail, mailer, verbose, sort_keyring,
@@ -432,6 +433,9 @@ class PiusSigner(object):
         # we get a ENC_INV.
         debug('Got GPG_KEY_EXP')
         continue
+      elif PiusSigner.GPG_KEY_CONSIDERED in line:
+        debug('Got KEY_CONSIDERED')
+        continue
       elif PiusSigner.GPG_PROGRESS in line:
         debug('Got skippable stuff')
         continue
@@ -557,7 +561,10 @@ class PiusSigner(object):
     line = ''
     while line not in (string,):
       debug('Waiting for line %s' % string)
-      line = fd.readline().strip()
+      raw_line = fd.readline()
+      if not raw_line:
+        raise GpgUnknownError('gpg output unexpectedly ended')
+      line = raw_line.strip()
       debug('got line %s' % line)
 
   def sign_uid(self, key, index, level):
@@ -572,11 +579,11 @@ class PiusSigner(object):
     cmd = [self.gpg] + self.gpg_base_opts + self.gpg_quiet_opts + \
       self.gpg_fd_opts + keyring + [
           '-u', self.force_signer,
-      ] + agent + [
+      ] + agent + self.policy_opts() + [
           '--default-cert-level', level,
           '--no-ask-cert-level',
           '--edit-key', key,
-      ] + self.policy_opts()
+      ]  # NB: keep the `--edit-key <key>` at the very end of this list!
     logcmd(cmd)
     gpg = subprocess.Popen(cmd, stdin=subprocess.PIPE,
                            stdout=subprocess.PIPE,
@@ -615,6 +622,9 @@ class PiusSigner(object):
         print '  UID already signed'
         gpg.stdin.write('quit\n')
         return False
+      elif PiusSigner.GPG_KEY_CONSIDERED in line:
+        debug('Got KEY_CONSIDERED')
+        continue
       elif (PiusSigner.GPG_KEY_EXP in line or
             PiusSigner.GPG_SIG_EXP in line):
         # The user has an expired signing or encryption key, keep going
@@ -870,6 +880,9 @@ class PiusSigner(object):
       elif PiusSigner.GPG_ENC_INV in line:
         debug('Got GPG_ENC_INV')
         raise EncryptionKeyError
+      elif PiusSigner.GPG_KEY_CONSIDERED in line:
+        debug('Got KEY_CONSIDERED')
+        continue
       elif (PiusSigner.GPG_KEY_EXP in line or
             PiusSigner.GPG_SIG_EXP in line):
         # These just mean we passed a given key/sig that's expired, there
