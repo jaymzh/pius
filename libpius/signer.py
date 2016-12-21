@@ -497,7 +497,7 @@ class PiusSigner(object):
     cmd = [self.gpg] + self.gpg_base_opts + self.gpg_quiet_opts + [
         '--no-default-keyring',
         '--keyring', self.tmp_keyring,
-        '--import-options', 'import-minimal',
+        '--import-options', 'import-minimal,keep-ownertrust',
         '--import', path,
     ]
     self._run_and_check_status(cmd)
