@@ -1,7 +1,11 @@
-Unreleased
-Released:
+2.2.3
+Released: 1/16/17
 phil@ipom.com
 - Fix crash in `-e` mode. Fixes #28.
+- Fix pius-report crash
+- Fix pius-report mis-matched email bodies
+noah@coderanger.net
+- Fix message typo
 
 2.2.2
 Released: 1/17/15
