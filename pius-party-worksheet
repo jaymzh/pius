@@ -42,7 +42,7 @@ sub get_fingerprints
   my $keyring = shift;
   my $cmd = 'gpg --fingerprint --no-default-keyring --no-options'
     . " --with-colons --keyring $keyring | egrep "
-    . '\'^(pub|fpr):\'';
+    . '\'^(pub|fpr|uid):\'';
   my @fps = `$cmd`;
   return \@fps;
 }
@@ -51,13 +51,38 @@ sub parse_fingerprints
 {
   my $fps = shift;
   my $key_metadata = {};
+  # This goes like this:
+  # pub <-- public key info
+  # fpr <-- fingerprint for previous line
+  # uid <-- uid
+  #     ... possibly many of these
+  # sub <-- subkey
+  # fpr <-- fingerprint for previous line
+  #     ... possibly many sub/fpr pairs
   while (my $line = shift(@{$fps})) {
     if ($line =~ /^pub/) {
-      my ($pub, $comptrust, $size, $type, $longid, $date, undef,
-          undef, $settrust, $owner, undef, undef, $flags, undef)
-          = split(/:/, $line);
-      my ($fpr, undef, undef, undef, undef, undef, undef, undef, undef,
-          $fingerprint) = split(/:/, shift(@{$fps}));
+      my $have_uid = 0;
+      my $have_fpr = 0;
+      my ($fingerprint, $owner, $size, $type, $longid, $date, $settrust, $flags);
+      # pubkey line
+      # pub:-:4096:1:A8B51F5E8032CCE4:1305730074:1590597119::-:::scESC:::::::
+      (undef, undef, $size, $type, $longid, $date, undef,
+       undef, $settrust, undef, undef, undef, $flags, undef) = split(/:/, $line);
+      while (my $next = shift(@{$fps})) {
+        if (!$have_fpr && $next =~ /^fpr/) {
+          # fpr:::::::::FB298ABBE1D00A1C8FA4DC1FA8B51F5E8032CCE4:
+          (undef, undef, undef, undef, undef, undef, undef, undef, undef,
+            $fingerprint) = split(/:/, $next);
+          $have_fpr = 1;
+          next;
+        }
+        if (!$have_uid && $next =~ /^uid/) {
+          (undef, undef, undef, undef, undef, undef, undef, undef, undef,
+           $owner) = split(/:/, $next);
+          $have_uid = 1;
+          last;
+        }
+      }
 
       if ($type eq '17') {
         $type = 'DSA';
