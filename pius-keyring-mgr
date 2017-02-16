@@ -77,7 +77,7 @@ def print_default_email():
 
 def keyid_from_fp(fp):
   '''Given a fingerprint without whitespace, returns keyid.'''
-  return fp[32:40]
+  return fp[24:40]
 
 def parse_csv(filename, sep, name_field, email_field, fp_field, ignore_emails,
               ignore_fps):
