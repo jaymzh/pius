@@ -481,28 +481,27 @@ class PiusSigner(object):
   def export_clean_key(self, key):
     '''Export clean key from the users' KeyID.'''
     # Export our public key and the given public key
-    for k in [self.signer, key]:
-       debug('exporting %s' % k)
-       path = self._tmpfile_path('%s.asc' % k)
-       self._export_key(self.keyring, [k], path)
+    for x in [self.signer, key]:
+       debug('exporting %s' % x)
+       path = self._tmpfile_path('%s.asc' % x)
+       self._export_key(self.keyring, [x], path)
 
   def clean_clean_key(self, key):
     '''Delete the "clean" unsigned key which we exported temporarily.'''
     # Remove the temporary exports of the public keys
-    for k in [self.signer, key]:
-        path = self._tmpfile_path('%s.asc' % k)
-        clean_files([path])
+    paths = [self._tmpfile_path('%s.asc' % x) for x in [self.signer, key]]
+    clean_files(paths)
 
   def import_clean_key(self, key):
     '''Import the clean key we exported in export_clean_key() to our temp
     keyring.'''
     # Import the export of our public key and the given public key
-    for k in [self.signer, key]:
-        debug('importing %s' % k)
+    for x in [self.signer, key]:
+        debug('importing %s' % x)
         import_opts = ['import-minimal']
-        if k == self.signer:
+        if x == self.signer:
             import_opts.append('keep-ownertrust')
-        path = self._tmpfile_path('%s.asc' %  k)
+        path = self._tmpfile_path('%s.asc' %  x)
         cmd = [self.gpg] + self.gpg_base_opts + self.gpg_quiet_opts + [
             '--no-default-keyring',
             '--keyring', self.tmp_keyring,
