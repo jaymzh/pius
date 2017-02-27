@@ -480,28 +480,35 @@ class PiusSigner(object):
 
   def export_clean_key(self, key):
     '''Export clean key from the users' KeyID.'''
-    debug('exporting %s' % key)
-    # We have to export our own public key as well
-    keys_to_export = [key, self.signer]
-    path = self._tmpfile_path('%s.asc' % key)
-    self._export_key(self.keyring, keys_to_export, path)
+    # Export our public key and the given public key
+    for x in [self.signer, key]:
+       debug('exporting %s' % x)
+       path = self._tmpfile_path('%s.asc' % x)
+       self._export_key(self.keyring, [x], path)
 
   def clean_clean_key(self, key):
     '''Delete the "clean" unsigned key which we exported temporarily.'''
-    path = self._tmpfile_path('%s.asc' % key)
-    clean_files([path])
+    # Remove the temporary exports of the public keys
+    paths = [self._tmpfile_path('%s.asc' % x) for x in [self.signer, key]]
+    clean_files(paths)
 
   def import_clean_key(self, key):
-    '''Import the clean key we expoerted in export_clean_key() to our temp
+    '''Import the clean key we exported in export_clean_key() to our temp
     keyring.'''
-    path = self._tmpfile_path('%s.asc' %  key)
-    cmd = [self.gpg] + self.gpg_base_opts + self.gpg_quiet_opts + [
-        '--no-default-keyring',
-        '--keyring', self.tmp_keyring,
-        '--import-options', 'import-minimal',
-        '--import', path,
-    ]
-    self._run_and_check_status(cmd)
+    # Import the export of our public key and the given public key
+    for x in [self.signer, key]:
+        debug('importing %s' % x)
+        import_opts = ['import-minimal']
+        if x == self.signer:
+            import_opts.append('keep-ownertrust')
+        path = self._tmpfile_path('%s.asc' %  x)
+        cmd = [self.gpg] + self.gpg_base_opts + self.gpg_quiet_opts + [
+            '--no-default-keyring',
+            '--keyring', self.tmp_keyring,
+            '--import-options', ','.join(import_opts),
+            '--import', path,
+        ]
+        self._run_and_check_status(cmd)
 
   def policy_opts(self):
     if self.policy_url:
