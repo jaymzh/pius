@@ -1,3 +1,12 @@
+2.2.4
+Released: 2/28/17
+phil@ipom.com
+- [pius] Handle agent version mismatch error from gpg
+- [pius-keyring-mgr] Use long keyids (security)
+- [pius-party-worksheet] Handle new gpg format
+pstarrev@gmail.com
+- [pius] - Do not remove signing key from trustdb (closes #47)
+
 2.2.3
 Released: 1/16/17
 phil@ipom.com
