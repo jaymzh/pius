@@ -125,7 +125,7 @@ def main():
                       sort_keyring=True)
   parser.add_option('-a', '--use-agent', action='store_const', const=MODE_AGENT,
                     dest='mode',
-                    help='Use pgp-agent instead of letting gpg prompt the'
+                    help='Use gpg-agent instead of letting gpg prompt the'
                          ' user for every UID. [default: true]')
   parser.add_option('-A', '--all-keys', action='store_true', dest='all_keys',
                     help='Sign all keys on the keyring. Requires -r.')
@@ -294,7 +294,7 @@ def main():
     key_list = args
 
   if options.mode == MODE_CACHE_PASSPHRASE:
-    print 'NOTE: See the README about security implications.'
+    print 'NOTE: See the README.md file section about security implications.'
     while True:
       signer.get_passphrase()
       if not signer.verify_passphrase():

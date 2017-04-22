@@ -16,7 +16,7 @@ Source: %{name}-%{version}.tar.bz2
 %description
  The PGP Individual UID Signer (PIUS) is a tool for individually
  signing all of the UIDs on a set of keys and encrypt-emailing each
- one to it's respective email address. This drastically reduces the time
+ one to its respective email address. This drastically reduces the time
  and errors involved in signing keys after a keysigning party.
 
 %prep
