@@ -458,7 +458,7 @@ class PiusSigner(object):
     if retval != 0:
       # We don't catch this, but that's fine, if this errors, a stack
       # trace is what we want
-      raise GpgUnknownError
+      raise GpgUnknownError("'%s' exited with %d" % (' '.join(cmd), retval))
 
   def _export_key(self, keyring, keys, path):
     '''Internal function used by other export_* functions.'''
@@ -497,18 +497,25 @@ class PiusSigner(object):
     keyring.'''
     # Import the export of our public key and the given public key
     for x in [self.signer, key]:
-        debug('importing %s' % x)
-        import_opts = ['import-minimal']
-        if x == self.signer:
-            import_opts.append('keep-ownertrust')
-        path = self._tmpfile_path('%s.asc' %  x)
-        cmd = [self.gpg] + self.gpg_base_opts + self.gpg_quiet_opts + [
-            '--no-default-keyring',
-            '--keyring', self.tmp_keyring,
-            '--import-options', ','.join(import_opts),
-            '--import', path,
-        ]
+      debug('importing %s' % x)
+      import_opts = ['import-minimal']
+      if x == self.signer:
+        import_opts.append('keep-ownertrust')
+      path = self._tmpfile_path('%s.asc' %  x)
+      cmd = [self.gpg] + self.gpg_base_opts + self.gpg_quiet_opts + [
+          '--no-default-keyring',
+          '--keyring', self.tmp_keyring,
+          '--import-options', ','.join(import_opts),
+          '--import', path,
+      ]
+      try:
         self._run_and_check_status(cmd)
+      except GpgUnknownError as e:
+        if x == self.signer:
+            print("\n\nERROR: Didn't find the signing key on keyring")
+            sys.exit(1)
+        raise e
+
 
   def policy_opts(self):
     if self.policy_url:
