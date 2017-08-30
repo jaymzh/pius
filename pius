@@ -137,9 +137,6 @@ def main():
                     help='Encrypt output files with respective keys.')
   parser.add_option('-d', '--debug', action='store_true', dest='debug',
                     help='Enable debugging output.')
-  parser.add_option('-H', '--mail-host', dest='mail_host', metavar='HOSTNAME',
-                    nargs=1, type='not_another_opt',
-                    help='Hostname of SMTP server. [default: %default]')
   parser.add_option('-i', '--interactive', action='store_const',
                     const=MODE_INTERACTIVE, dest='mode',
                     help='Use the pexpect module for signing and drop to the'
@@ -156,33 +153,17 @@ def main():
                     help='Email the encrypted, signed keys to the'
                          ' respective email addresses. EMAIL is the address'
                          ' to send from. See also -H and -P.')
-  parser.add_option('-M', '--mail-text', dest='mail_text', metavar='FILE',
-                    nargs=1, type='not_another_opt',
-                    help='Use the text in FILE as the body of email when'
-                         ' sending out emails instead of the default text.'
-                         ' To see the default text use'
-                         ' --print-default-email. Requires -m.')
   parser.add_option('-N', '--no-sort-keyring', dest='sort_keyring',
                     action='store_false',
                     help='Do not sort the keyring by name.')
-  parser.add_option('-n', '--override-email', dest='mail_override',
-                    metavar='EMAIL', nargs=1, type='email',
-                    help='Rather than send to the user, send to this address.'
-                         ' Mostly useful for debugging.')
   parser.add_option('-o', '--out-dir', dest='out_dir', metavar='OUTDIR',
                     nargs=1, type='not_another_opt',
                     help='Directory to put signed keys in. [default: %default]')
-  parser.add_option('-O', '--no-pgp-mime', action='store_true',
-                    dest='mail_no_pgp_mime',
-                    help='Do not use PGP/Mime when sending email.')
   parser.add_option('-p', '--cache-passphrase', action='store_const',
                     const=MODE_CACHE_PASSPHRASE, dest='mode',
                     help='Cache private key passphrase in memory and provide'
                          ' it to gpg instead of letting gpg prompt the user'
                          ' for every UID. [default: false]')
-  parser.add_option('-P', '--mail-port', dest='mail_port', metavar='PORT',
-                    nargs=1, type='int',
-                    help='Port of SMTP server. [default: %default]')
   parser.add_option('-r', '--keyring', dest='keyring', metavar='KEYRING',
                     nargs=1, type='not_another_opt',
                     help='The keyring to use. Be sure to specify full or'
@@ -195,23 +176,17 @@ def main():
                     type='keyid',
                     help='Force GnuPG to use this exact keyid to sign (do not'
                          ' guess subkey)')
-  parser.add_option('-S', '--no-mail-tls', action='store_false',
-                    dest='mail_tls',
-                    help='Do not use STARTTLS when talking to the SMTP server.')
   parser.add_option('-t', '--tmp-dir', dest='tmp_dir', nargs=1,
                     type='not_another_opt',
                     help='Directory to put temporary stuff in. [default:'
                          ' %default]')
   parser.add_option('-T', '--print-default-email', dest='print_default_email',
                     action='store_true', help='Print the default email.')
-  parser.add_option('-u', '--mail-user', dest='mail_user', metavar='USER',
-                    type='not_another_opt', nargs=1,
-                    help='Authenticate to the SMTP server, and use username'
-                         ' USER. You will be prompted for the password.')
   parser.add_option('-U', '--policy-url', dest='policy_url',
                     help='Policy URL to include in each signature')
   parser.add_option('-v', '--verbose', dest='verbose', action='store_true',
                     help='Be more verbose.')
+  pmailer.PiusMailer.add_options(parser)
 
   # Check for extra options in the ~/.pius file
   all_opts = []
