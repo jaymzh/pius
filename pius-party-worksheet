@@ -90,6 +90,8 @@ sub parse_fingerprints
         $type = 'El Gamal';
       } elsif ($type eq '1') {
         $type = 'RSA';
+      } else {
+        $type = 'Unknown';
       }
 
       if (length($fingerprint) == 40) {
