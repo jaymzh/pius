@@ -119,7 +119,7 @@ Finally I decided to sit down and combine all these shell scripts into a single
 unified utility to make signing individual UIDs on a multitude of keys as
 painless as possible. Since this was going to be mostly forking off gpg
 instances, it seemed like shell was the way to go. However, after dealing with
-gpg and it's "API" for a while, I quickly realized that was not going to be the
+gpg and its "API" for a while, I quickly realized that was not going to be the
 best course of action. Since I wanted an excuse to write more python, instead
 of my usual perl, I decided to write this in python.
 

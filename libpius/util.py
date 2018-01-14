@@ -39,7 +39,7 @@ VALID_OPTIONS = [
 ]
 
 def debug(line):
-  '''Print a line, if debug is on, preceeded with "DEBUG: ".'''
+  '''Print a line, if debug is on, preceded with "DEBUG: ".'''
   if DEBUG_ON:
       print('DEBUG:', line)
 
@@ -95,7 +95,7 @@ def parse_dotfile(parser):
 
 #
 # Stupid fucking optparse will assume "-m -e" means "-e is the email address
-# being passed to -m"... instead of "oh, -e is an option, -m is missing it's
+# being passed to -m"... instead of "oh, -e is an option, -m is missing its
 # required argument. This is an ugly hack around that.
 #
 
