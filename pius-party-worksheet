@@ -40,7 +40,7 @@ sub print_html_header
 sub get_fingerprints
 {
   my $keyring = shift;
-  my $cmd = 'gpg --fingerprint --no-default-keyring --no-options'
+  my $cmd = 'gpg2 --fingerprint --no-default-keyring --no-options'
     . " --with-colons --keyring $keyring | egrep "
     . '\'^(pub|fpr|uid):\'';
   my @fps = `$cmd`;
@@ -90,6 +90,8 @@ sub parse_fingerprints
         $type = 'El Gamal';
       } elsif ($type eq '1') {
         $type = 'RSA';
+      } else {
+        $type = 'Unknown';
       }
 
       if (length($fingerprint) == 40) {
