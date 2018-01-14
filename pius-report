@@ -363,7 +363,7 @@ def main():
                     help='The name of the party. This will be printed in the'
                          ' emails sent out. Only useful with -m.')
   parser.add_option('--no-refresh', dest='refresh', action='store_false',
-                    default=True)
+                    default=True, help="Do not refresh keys.")
 
   pmailer.PiusMailer.add_options(parser)
 
