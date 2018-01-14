@@ -1,12 +1,14 @@
 '''A set of util functions and variables for the PIUS suite.'''
 
 # vim:shiftwidth=2:tabstop=2:expandtab:textwidth=80:softtabstop=2:ai:
+from __future__ import print_function
 
-from copy import copy
-from libpius.constants import *
-from optparse import Option, OptionValueError
 import os
 import re
+from copy import copy
+from optparse import Option, OptionValueError
+
+from libpius.constants import PIUS_HOME, PIUS_RC
 
 DEBUG_ON = False
 VALID_OPTIONS = [
@@ -39,7 +41,8 @@ VALID_OPTIONS = [
 def debug(line):
   '''Print a line, if debug is on, preceeded with "DEBUG: ".'''
   if DEBUG_ON:
-    print 'DEBUG:', line
+      print('DEBUG:', line)
+
 
 def logcmd(cmd):
   debug("Running: %s" % ' '.join(cmd))
@@ -56,15 +59,15 @@ def parse_dotfile(parser):
 
   # Handle conversion of old rc file
   if os.path.isfile(PIUS_HOME):
-    print 'Converting ~/.pius to ~/.pius/piusrc'
+    print('Converting ~/.pius to ~/.pius/piusrc')
     # temporarily rename ~/.pius to ~/.piusrc
     os.rename(PIUS_HOME, tmp_file)
-    os.mkdir(PIUS_HOME, 0755)
+    os.mkdir(PIUS_HOME, 0o755)
     os.rename(tmp_file, PIUS_RC)
   # Handle partial conversion
   elif os.path.isfile(tmp_file) and not os.path.islink(tmp_file):
     if not os.path.isdir(PIUS_HOME):
-      os.mkdir(PIUS_HOME, 0755)
+      os.mkdir(PIUS_HOME, 0o755)
     if not os.path.isfile(PIUS_RC):
       os.rename(tmp_file, PIUS_RC)
     else:
@@ -131,4 +134,3 @@ class MyOption(Option):
   })
 
 # END Stupid python optparse hack.
-

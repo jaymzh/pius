@@ -1,6 +1,9 @@
 # WIP: wotsap parser
-
 import json
+import os
+
+from six.moves import input
+
 # TODO: since the wotsap website is all fubar'd, I've hacked it up to read
 # /tmp/report. You can generate this with 'wotsap >/tmp/report'
 class pgp_report(object):
@@ -99,7 +102,7 @@ class pgp_report(object):
       else:
         signed = ''
         while signed not in ('y', 'Y', 'n', 'N', 'yes', 'no'):
-          signed = raw_input('Have you signed key %s? ' % keyid)
+          signed = input('Have you signed key %s? ' % keyid)
 
         if signed in ('y', 'Y', 'yes'):
           self.sign_data[keyid] = self.kSIGNED
@@ -124,5 +127,3 @@ class pgp_report(object):
       keys.append('0x%s' % line.split(':')[9][-8:])
     gpg.close()
     return keys
-
-

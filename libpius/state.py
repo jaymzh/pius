@@ -1,7 +1,11 @@
 # vim:shiftwidth=2:tabstop=2:expandtab:textwidth=80:softtabstop=2:ai:
+from __future__ import print_function
 
-from libpius.constants import *
 import json
+import os
+
+from libpius.constants import PIUS_HOME
+
 
 class SignState(object):
 
@@ -63,10 +67,10 @@ class SignState(object):
     # merge the two with the one we're passed in winning
     result = dict(prev_signstate.items() + signstate.items())
     if not os.path.exists(PIUS_HOME):
-      os.mkdir(PIUS_HOME, 0750)
+      os.mkdir(PIUS_HOME, 0o750)
     if not os.path.isdir(PIUS_HOME):
-      print ('WARNING: There is a ~/.pius which is not a directory.'
-             ' Not storing state.')
+      print('WARNING: There is a ~/.pius which is not a directory.'
+            ' Not storing state.')
       return
     fp = open(SignState.kPIUS_SIGNED_KEYS, 'w')
     fp.write(json.dumps(result))

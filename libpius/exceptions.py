@@ -32,6 +32,3 @@ class GpgUnknownError(Exception):
 class MailSendError(Exception):
   '''An exception for for NOT the above. Should never happen.'''
   pass
-
-
-
