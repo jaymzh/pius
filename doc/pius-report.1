@@ -1,0 +1,47 @@
+.TH PIUS\-REPORT 1 "DECEMBER 2016"
+.SH NAME
+pius\-report \- PIUS (PGP Individual UID Signer) Report Tool
+.SH SYNOPSIS
+.B pius\-report
+.RI [ options ]
+.SH DESCRIPTION
+.B pius\-report
+sends out reminders to participants of a keysigning party, pointing
+out what they still need to do. The reminders are personalized.
+.SH OPTIONS
+.IP "\fB\-h\fP, \fB\-\-help\fP"
+show this help message and exit
+.IP "\fB\-b\fP \fIPATH\fP, \fB\-\-gpg\-path=\fP\fIPATH\fP"
+Path to gpg binary. [default: \fI/usr/bin/gpg\fP]
+.IP "\fB\-d\fP, \fB\-\-debug\fP"
+Enable debugging output.
+.IP "\fB\-s\fP \fIKEYID\fP, \fB\-\-signer=\fP\fIKEYID\fP"
+The key you sign with.
+.IP "\fB\-r\fP \fIKEYRING\fP, \fB\-\-keyring=\fP\fIKEYRING\fP"
+Party keyring to use.
+.IP "\fB\-m\fP \fIEMAIL\-ADDRESS\fP, \fB\-\-mail=\fP\fIEMAIL\-ADDRESS\fP"
+Email the encrypted, signed keys to the respective email addresses. \fIEMAIL-ADDRESS\fP is the address to send from. See also \fB\-H\fP and \fB\-P\fP.
+.IP "\fB\-t\fP \fITEMP\-DIR\fP, \fB\-\-tmp\-dir=\fP\fITEMP\-DIR\fP"
+Directory to put temporary stuff in. [default: none]
+.IP "\fB\-p\fP \fINAME\fP, \fB\-\-party=\fP\fINAME\fP"
+Name of the party. This will be printed in the emails sent. Only useful with -m.
+.IP "\fB\-\-no\-refresh\fP"
+Do not refresh keys.
+.IP "\fB\-u\fP \fIUSER\fP, \fB\-\-mail\-user=\fP\fIUSER\fP"
+Authenticate to the SMTP server with username \fIUSER\fP. You will be prompted for the password.
+.IP "\fB\-S\fP,  \fB\-\-no\-mail\-tls\fP"
+Do not use STARTTLS when talking to the SMTP server.
+.IP "\fB\-P\fP \fIPORT\fP,  \fB\-\-mail\-port=\fP\fIPORT\fP"
+\fIPort\fP of SMTP server. [default: 587]
+.IP "\fB\-O\fP, \fB\-\-no\-pgp\-mime\fP"
+Do not use PGP/Mime when sending email.
+.IP "\fB\-n\fP \fIEMAIL\-ADDRESS\fP, \fB\-\-override\-email=\fP\fIEMAIL\-ADDRESS\fP"
+Rather than send to the user, send to this address. Mostly useful for debugging.
+.IP "\fB\-M\fP \fIFILE\fP, \fB\-\-mail\-text=\fP\fIFILE\fP"
+Use the text in \fIFILE\fP as the body of email when sending out emails instead of the default text. To see the default text use \fB\-\-print\-default\-email\fP. Requires \fB\-m\fP.
+.IP "\fB\-H\fP \fIHOSTNAME\fP, \fB\-\-mail\-host=\fP\fIHOSTNAME\fP"
+Hostname of SMTP server. [default: \fIlocalhost\fP]
+.SH AUTHOR
+PIUS-REPORT was written by Phil Dibowitz <phil@ipom.com>
+.PP
+This manual page was written by Felix Lechner <felix.lechner@gmail.com> for the Debian project, but may be used by others.

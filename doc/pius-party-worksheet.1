@@ -1,0 +1,26 @@
+.TH PIUS\-PARTY\-WORKSHEET 1 "DECEMBER 2016"
+.SH NAME
+pius\-party\-worksheet \- PIUS (PGP Individual UID Signer) Party Worksheet Generator
+.SH SYNOPSIS
+.B pius\-party\-worksheet
+.RI [ options ]
+.RI < keyring >
+> outfile.html
+.SH DESCRIPTION
+.B pius\-party\-worksheet
+is a small utility to generate a worksheet for a key signing party.
+Attendees will find it easier and faster to verify keys and identities using
+this sheet. They can use it as a guide to sign keys after the party.
+.SH OPTIONS
+.IP "\fB\-e\fP, \fB\-\-extra\-fields\fP [\fIFIELD\fP, ... ]"
+Comma-separated list of extra columns. Useful if some participants plan
+to do something extra, such as S/MIME or CA Cert verification.
+.IP "\fB\-h\fP, \fB\-\-help\fP"
+Show this help message and exit.
+.IP "\fB\-v\fP, \fB\-\-version\fP"
+Show program version number and exit.
+.SH AUTHOR
+PIUS was written by Phil Dibowitz <phil@ipom.com>
+.PP
+This manual page was written by Felix Lechner <felix.lechner@gmail.com>
+for the Debian project, but may be used by others.

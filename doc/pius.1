@@ -1,0 +1,88 @@
+.TH PIUS 1 "DECEMBER 2016"
+.SH NAME
+pius \- PGP Individual UID Signer
+.SH SYNOPSIS
+.B pius
+.RI [ options ]
+.B \-s
+.RI < signer-keyid >
+.RI < keyid >
+[
+.RI < keyid >
+\& ... ]
+.br
+.B pius
+.RI [ options ]
+.B \-A \-r
+.RI < keyring-path >
+.B \-s
+.RI < signer-keyid >
+.SH DESCRIPTION
+.B pius
+is a tool for individually signing all of the UIDs on a set of keys,
+and emailing an encrypted copy of each such signature to the email
+address associated with that UID.
+.PP
+As a result of this process, the recipient can choose which signatures
+to import. Also, signatures of inactive uids are not delivered. This
+tool greatly reduces time and error when signing keys.
+.SH OPTIONS
+.IP \fB\-\-version\fP
+show program's version number and exit
+.IP "\fB\-h\fP, \fB\-\-help\fP"
+show this help message and exit
+.IP "\fB\-a\fP, \fB\-\-use\-agent\fP"
+Use gpg-agent instead of letting gpg prompt the user or every UID. [default: true]
+.IP "\fB\-A\fP, \fB\-\-all\-keys\fP"
+Sign all keys on the keyring. Requires \fB\-r\fP.
+.IP "\fB\-d\fP, \fB\-\-debug\fP"
+Enable debugging output.
+.IP "\fB\-b\fP \fIPATH\fP, \fB\-\-gpg\-path=\fP\fIPATH\fP"
+Path to gpg binary. [default: \fI/usr/bin/gpg2\fP]
+.IP "\fB\-e\fP, \fB\-\-encrypt\-outfiles\fP"
+Encrypt output files with respective keys.
+.IP "\fB\-H\fP \fIHOSTNAME\fP, \fB\-\-mail\-host=\fP\fIHOSTNAME\fP"
+Hostname of SMTP server. [default: \fIlocalhost\fP]
+.IP "\fB\-i\fP, \fB\-\-interactive\fP"
+Use the pexpect module for signing and drop to the gpg shell for entering the passphrase. [default: false]
+.IP "\fB\-I\fP, \fB\-\-import\fP"
+Also import the unsigned keys from the keyring into the default keyring. Ignored if \fB\-r\fP is not specified, or if it's the same as the default keyring.
+.IP "\fB\-m\fP \fIFROM\-EMAIL\fP, \fB\-\-mail=\fP\fIFROM\-EMAIL\fP"
+Email the encrypted, signed keys to the respective email addresses using \fIFROM\-EMAIL\fP as the sender. See also \fB\-H\fP and \fB\-P\fP.
+.IP "\fB\-M\fP \fIFILE\fP, \fB\-\-mail\-text=\fP\fIFILE\fP"
+Use the text in \fIFILE\fP as the body of email when sending out emails instead of the default text. To see the default text use \fB\-\-print\-default\-email\fP. Requires \fB\-m\fP.
+.IP "\fB\-N\fP, \fB\-\-no\-sort\-keyring\fP"
+Do not sort the keyring by name.
+.IP "\fB\-n\fP \fITO\-EMAIL\fP, \fB\-\-override\-email=\fP\fITO\-EMAIL\fP"
+Rather than send to the user, send to this address. Mostly useful for debugging.
+.IP "\fB\-o\fP \fIOUTPUT\-DIR\fP, \fB\-\-out\-dir=\fP\fIOUTPUT\-DIR\fP"
+Directory to put signed keys in. [default: \fI/tmp/pius_out\fP]
+.IP "\fB\-O\fP, \fB\-\-no\-pgp\-mime\fP"
+Do not use PGP/Mime when sending email.
+.IP "\fB\-p\fP, \fB\-\-cache\-passphrase\fP"
+Cache private key passphrase in memory and provide it to gpg instead of letting gpg prompt the user for every UID. [default: false]
+.IP "\fB\-P\fP \fIPORT\fP, \fB\-\-mail\-port=\fP\fIPORT\fP"
+\fIPort\fP of SMTP server. [default: 25]
+.IP "\fB\-r\fP \fIKEYRING\fP, \fB\-\-keyring=\fP\fIKEYRING\fP"
+The keyring to use. Be sure to specify full or relative path. Just a filename will cause GPG to assume relative to \fI~/.gnupg\fP. [default: \fI~/.gnupg/pubring.gpg\fP]
+.IP "\fB\-s\fP \fISIGNER\-KEYID\fP, \fB\-\-signer=\fP\fISIGNER\-KEYID\fP"
+The keyid to sign with (required).
+.IP "\fB\-f\fP \fIKEYID\fP, \fB\-\-force\-signer=\fP\fIKEYID\fP"
+Force GnuPG to use this exact keyid to sign (do not guess subkey)
+.IP "\fB\-S\fP, \fB\-\-no\-mail\-tls\fP"
+Do not use STARTTLS when talking to the SMTP server.
+.IP "\fB\-t\fP \fITEMP\-DIR\fP, \fB\-\-tmp\-dir=\fP\fITEMP\-DIR\fP"
+Directory to put temporary stuff in. [default: \fI/tmp/pius_tmp\fP]
+.IP "\fB\-T\fP, \fB\-\-print\-default\-email\fP"
+Print the default email.
+.IP "\fB\-u\fP \fIUSER\fP, \fB\-\-mail\-user=\fP\fIUSER\fP"
+Authenticate to the SMTP server with username \fIUSER\fP. You will be prompted for the password.
+.IP "\fB\-U\fP \fIPOLICY\-URL\fP, \fB\-\-policy\-url=\fP\fIPOLICY\-URL\fP"
+Policy URL to include in each signature.
+.IP "\fB\-v\fP, \fB\-\-verbose\fP"
+Be more verbose.
+.SH AUTHOR
+PIUS was written by Phil Dibowitz <phil@ipom.com>
+.PP
+This manual page was written by Luke Cycon <lcycon@gmail.com> and Felix Lechner <felix.lechner@gmail.com>
+for the Debian project, but may be used by others.
