@@ -1,0 +1,94 @@
+.TH PIUS\-KEYRING\-MGR 1 "DECEMBER 2016"
+.SH NAME
+pius\-keyring\-mgr \- PIUS (PGP Individual UID Signer) Keyring Manager
+.SH SYNOPSIS
+.B pius\-keyring\-mgr
+.RI < mode >
+.RI [ options ]
+.SH DESCRIPTION
+.B pius\-keyring\-mgr
+has several modes to manage keyrings. It was designed for signing
+parties, but can be used for any PGP keyring. The \fImode\fP
+must be the first argument, with options as explained below.
+.SH OPTIONS
+.IP "\fB\-d\fP, \fB\-\-debug\fP"
+Enable debugging output.
+.IP "\fB\-g\fP \fIPATH\fP, \fB\-\-gpg\-path=\fP\fIPATH\fP"
+Path to gpg binary. [default: \fI/usr/bin/gpg2\fP]
+.IP "\fB\-r\fP \fIKEYRING\fP, \fB\-\-keyring=\fP\fIKEYRING\fP"
+Use this keyring.
+.IP "\fB\-v\fP, \fB\-\-verbose\fP"
+Print summaries.
+.SH MODES
+The \fBbuild\fP mode is used most of the time. It can parse a CSV file,
+automatically look for keys, and email anyone whose key was not
+be found. This mode can also import keys from an mbox file. The options are:
+.IP "\fB\-b\fP \fIMBOX\-FILE\fP, \fB\-\-mbox\-file=\fP\fIMBOX\-FILE\fP"
+Parse \fIMBOX\-FILE\fP and examine each message for PGP fingerprints
+or ascii-armored keys. Decodes messages as necessary.
+.IP "\fB\-c\fP \fICSV\-FILE\fP, \fB\-\-csv\-file=\fP\fICSV\-FILE\fP"
+Parse \fIMBOX\-FILE\fP and import keys. You will almost certainly also
+want -D, -E, -F and -N.
+.IP "\fB\-D\fP \fIDELIMITER\fP, \fB\-\-delimiter=\fP\fIDELIMITER\fP"
+Field delimiter to use when parsing CSV. Only meaningful with -c.
+[default: ',']
+.IP "\fB\-E\fP \fIEMAIL\-COLUMN\fP, \fB\-\-email\-field=\fP\fIEMAIL\-COLUMN\fP"
+Column number with the email address in the CSV file. Only meaningful with -c.
+[default: 3]
+.IP "\fB\-F\fP \fIFINGERPRINT\-COLUMN\fP, \fB\-\-fp\-field=\fP\fIFINGERPRINT\-COLUMN\fP"
+Column number with the GPG fingerprint in the CSV file. Only meaningful with -c.
+[default: 4]
+.IP "\fB\-m\fP \fIFROM\-EMAIL\fP, \fB\-\-mail=\fP\fIFROM\-EMAIL\fP"
+Email people whose keys were not located, using \fIFROM\-EMAIL\fP as sender.
+.IP "\fB\-M\fP \fIFILE\fP, \fB\-\-mail\-text=\fP\fIFILE\fP"
+Use the text in FILE as the body of email when sending emails instead
+of the default text. To see the default text use --print-default-email.
+Requires -m.
+.IP "\fB\-N\fP \fINAME\-COLUMN\fP, \fB\-\-name\-field=\fP\fINAME\-COLUMN\fP"
+Column number with the name in the CSV file.
+Only meaningful with -c. [default: 2]
+.IP "\fB\-n\fP \fITO\-EMAIL\fP, \fB\-\-override\-email=\fP\fITO\-EMAIL\fP"
+Rather than send to the user, send to this address. Mostly useful for debugging.
+.IP "\fB\-p\fP \fIPARTY-NAME\fP, \fB\-\-party=\fP\fIPARTY-NAME\fP"
+The name of the party. Will be printed in the email sent out.
+Only useful with -m.
+.IP "\fB\-s\fP \fIKEY\-SERVER\fP, \fB\-\-keyservers=\fP\fIKEY\-SERVER\fP"
+Try this keyserver. Specify once for each server (-s foo -s bar).
+[default: pool.sks-keyservers.net, pgp.mit.edu, keys.gnupg.net]
+.IP "\fB\-t\fP \fITEMP\-DIR\fP, \fB\-\-tmp\-dir=\fP\fITEMP\-DIR\fP"
+Directory to put temporary stuff in. [default: \fI/tmp/pius_keyring_mgr_tmp\fP]
+.IP "\fB\-T\fP, \fB\-\-print\-default\-email\fP"
+Print the default email.
+.IP "\fB\-\-ignore-emails=\fP\fIIGNORE\-EMAILS\fP"
+Comma-separated list of emails to ignore (no spaces).
+.IP "\fB\-\-ignore-fingerprints=\fP\fIIGNORE-FINGERPRINTS\fP"
+Comma-separated list of PGP fingerprints to ignore (no spaces).
+.PP
+The \fBprune\fP mode opens a keyring and, for each key, asks to remove it.
+Useful after a party to trim a keyring of people who didn't show, and
+before distributing the keyring to those who went. There are no options.
+.PP
+The \fBraw\fP mode passes options directly to gpg. Useful when adding
+keys by hand. Your options are added to those those necessary to work
+on the party keyring safely. (It does not load your personal keyring.)
+Your options must be passed after '\-\-' to prevent
+pius\-keyring\-manager from interpreting them as its own.
+.SH EXAMPLES
+Scan a CSV file and an MBOX for emails and write to anyone whose key was not
+found, using you@company.com as sender:
+.PP
+.nf
+/usr/bin/pius\-keyring\-mgr build \-\-csv\-file /tmp/report \-\-mbox\-file
+/tmp/mbox \-\-mail you@company.com
+.fi
+.PP
+Download a key and add it to the party keyring:
+.PP
+.nf
+pius\-keyring\-mgr raw \-r path/to/keyring.gpg \-\- \-\-recv\-key <keyid>
+.fi
+.SH AUTHOR
+PIUS was written by Phil Dibowitz <phil@ipom.com>
+.PP
+This manual page was written by Felix Lechner <felix.lechner@gmail.com>
+for the Debian project, but may be used by others.
