@@ -47,6 +47,8 @@ Hostname of SMTP server. [default: \fIlocalhost\fP]
 Use the pexpect module for signing and drop to the gpg shell for entering the passphrase. [default: false]
 .IP "\fB\-I\fP, \fB\-\-import\fP"
 Also import the unsigned keys from the keyring into the default keyring. Ignored if \fB\-r\fP is not specified, or if it's the same as the default keyring.
+.IP "\fB\-L\fP, \fB\-\-save\-to\-mail\-dir\fP"
+Instead of calling SMTP, save the email to this directory. Useful for signing from an air gapped machine. The saved email files can be sent using your own MTA such as sendmail or mailx.
 .IP "\fB\-m\fP \fIFROM\-EMAIL\fP, \fB\-\-mail=\fP\fIFROM\-EMAIL\fP"
 Email the encrypted, signed keys to the respective email addresses using \fIFROM\-EMAIL\fP as the sender. See also \fB\-H\fP and \fB\-P\fP.
 .IP "\fB\-M\fP \fIFILE\fP, \fB\-\-mail\-text=\fP\fIFILE\fP"
