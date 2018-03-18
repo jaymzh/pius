@@ -1,7 +1,7 @@
 2.2.5
 Released: 3/17/18
 phil@ipom.com
-- [pius] Better error rerporting on GPG failures
+- [pius] Better error reporting on GPG failures
 - [pius-report] Fix mis-reporting of unsigned keys
 - make options between utilities consistent
 georgemarshall:
