@@ -122,17 +122,17 @@ class PiusMailer(object):
 
     The message headers MUST be added by the caller.'''
 
-    msg = email_mime_multipart(
+    msg = email_mime_multipart.MIMEMultipart(
         'encrypted', micalg="pgp-sha1", protocol="application/pgp-encrypted"
     )
     msg.preamble = 'This is an OpenPGP/MIME signed message (RFC 2440 and 3156)'
 
     # The signed part of the message. This is a MIME encapsulation
     # of the main body of the message *and* the key.
-    encrypted_body = email_mime_multipart('mixed')
+    encrypted_body = email_mime_multipart.MIMEMultipart('mixed')
 
     # First part of signed body
-    textpart = email_mime_base('text', 'plain', charset="ISO-8859-1")
+    textpart = email_mime_base.MIMEBase('text', 'plain', charset="ISO-8859-1")
     textpart.add_header('Content-Transfer-Encoding', 'quoted-printable')
     textpart.__delitem__('MIME-Version')
     textpart.set_payload(quoprimime.encode(
@@ -142,7 +142,7 @@ class PiusMailer(object):
 
     # The second part of the signed body
     file_base = os.path.basename(filename)
-    attached_sig = email_mime_base('application', 'pgp-keys',
+    attached_sig = email_mime_base.MIMEBase('application', 'pgp-keys',
                                      name='%s' % file_base)
     attached_sig.add_header('Content-Disposition', 'inline',
                             filename='%s' % file_base)
@@ -183,13 +183,13 @@ class PiusMailer(object):
       raise EncryptionKeyError
 
     # Create the version part of the PGP/Mime encryption
-    pgp_ver = email_mime_base('application', 'pgp-encrypted')
+    pgp_ver = email_mime_base.MIMEBase('application', 'pgp-encrypted')
     pgp_ver.add_header('Content-Description', 'PGP/MIME version identification')
     pgp_ver.__delitem__('MIME-Version')
     pgp_ver.set_payload('Version: 1\n')
 
     # Create the big sign-encrypted body part
-    pgp_data = email_mime_base('application', 'octet-stream',
+    pgp_data = email_mime_base.MIMEBase('application', 'octet-stream',
                                  name='encrypted.asc')
     pgp_data.add_header('Content-Description', 'OpenPGP encrypted message')
     pgp_data.add_header('Content-Disposition', 'inline',
@@ -212,7 +212,7 @@ class PiusMailer(object):
     part = email_mime_text(self._get_email_body(signer, keyid, email))
     msg.attach(part)
 
-    part = email_mime_base('application', 'octet-stream')
+    part = email_mime_base.MIMEBase('application', 'octet-stream')
     part.add_header('Content-Disposition', 'inline; filename="%s"' %
                     os.path.basename(filename))
     part.set_payload(open(filename, 'r').read())
@@ -264,7 +264,7 @@ class PiusMailer(object):
         # NOTE WELL: SECURITY IMPORTANT NOTE!
         # In python 2.6 if you attempt to starttls() and the server doesn't
         # understand an exception is raised. However before that, it just
-        # carried on # and one could attempt to auth over a plain-text session.
+        # carried on and one could attempt to auth over a plain-text session.
         # This is BAD!
         #
         # So, in order be secure on older pythons we ehlo() and then check the
