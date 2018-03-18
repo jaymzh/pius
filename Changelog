@@ -1,3 +1,17 @@
+2.2.5
+Released: 3/17/18
+phil@ipom.com
+- [pius] Better error rerporting on GPG failures
+- [pius-report] Fix mis-reporting of unsigned keys
+- make options between utilities consistent
+georgemarshall:
+- port to python3
+lhirlimann
+- [pius-party-worksheet] use gpg2
+lechner
+- Add man pages from Debian
+- Fix help typos
+
 2.2.4
 Released: 2/28/17
 phil@ipom.com
