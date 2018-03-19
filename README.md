@@ -19,13 +19,13 @@ $ pius -A -s <your_keyid> -r <path_to_keyring> -m <your_email>
 
 For every key (`-A`) on the keyring (`-r`) this will prompt you to verify the
 fingerprint and choose a signing level. Then, if you tell it to, it will sign
-all UIDs on <keyid>, and export one copy of the for each UID with only that UID
+all UIDs on &lt;keyid&gt;, and export one copy of the for each UID with only that UID
 signed. Each one will then be encrypt-emailed off to the email address in the
 UID (`-m`). Finally, `-s` tells it which key to sign with.
 
 There are a variety of other options that you may want:
 * customize the tmpdir and outdir directories (-t and -o respectively)
-* encrypt the outfiles to <filename>_ENCRYPTED.asc (-e)
+* encrypt the outfiles to &lt;filename&gt;_ENCRYPTED.asc (-e)
 * import the unsigned keys to the default keyring (-I)
 * verbose mode (-v)
 * customize mail hostname and port (-H and -P respectively)
