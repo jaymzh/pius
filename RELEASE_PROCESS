@@ -24,3 +24,5 @@
   gpg -ab /tmp/pius-$version.tar.bz2
 
 6. Upload
+
+7. Update website
