@@ -105,7 +105,7 @@ tmp-dir=/home/you/pius/tmp
 use-agent
 ```
 
-PIUS will except `=`, `:` or whitespace as a separator, and will handle
+PIUS will accept `=`, `:` or whitespace as a separator, and will handle
 extra whitespace around any separator.
 
 ## History
