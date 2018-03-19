@@ -456,14 +456,15 @@ class PiusSigner(object):
     gpg.wait()
     return enc_file
 
-  def _run_and_check_status(self, cmd):
+  def _run_and_check_status(self, cmd, shell=False):
     '''Helper function for running a gpg call that requires no input
     but that we want to make sure succeeded.'''
     logcmd(cmd)
     gpg = subprocess.Popen(cmd, stdin=subprocess.PIPE,
                            stdout=self.null,
                            stderr=self.null,
-                           close_fds=True)
+                           shell=shell,
+                           close_fds=(not shell))
     retval = gpg.wait()
     if retval != 0:
       # We don't catch this, but that's fine, if this errors, a stack
@@ -853,9 +854,11 @@ class PiusSigner(object):
     '''Import all the unsigned keys from keyring to main keyring.'''
     print('Importing keyring...')
     cmd = [self.gpg] + self.gpg_base_opts + self.gpg_quiet_opts + [
-        '--import', self.keyring,
-    ]
-    self._run_and_check_status(cmd)
+        '--no-default-keyring',
+        '--keyring', self.keyring,
+        '--export', '|', self.gpg,
+    ] + self.gpg_base_opts + self.gpg_quiet_opts + ['--import']
+    self._run_and_check_status(' '.join(cmd), True)
 
   def encrypt_and_sign_file(self, infile, outfile, keyid):
     '''Encrypt and sign a file.
