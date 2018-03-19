@@ -1,3 +1,11 @@
+2.2.6
+Released: 3/18/18
+phil@ipom.com
+- [pius] Fix importing keyring (closes #74)
+- [pius-party-worksheet] Add support for EC keytypes (closes #76)
+- README.md fixes (closes #77)
+- help message fixes (closes #78)
+
 2.2.5
 Released: 3/17/18
 phil@ipom.com

@@ -1,5 +1,5 @@
 %define name pius
-%define version	2.2.5
+%define version	2.2.6
 %define release 1
 
 Name: %{name}
