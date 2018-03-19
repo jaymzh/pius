@@ -469,7 +469,9 @@ class PiusSigner(object):
     if retval != 0:
       # We don't catch this, but that's fine, if this errors, a stack
       # trace is what we want
-      raise GpgUnknownError("'%s' exited with %d" % (' '.join(cmd), retval))
+      raise GpgUnknownError("'%s' exited with %d" % (
+        ' '.join(cmd) if isinstance(cmd, list) else cmd, retval
+      ))
 
   def _export_key(self, keyring, keys, path):
     '''Internal function used by other export_* functions.'''

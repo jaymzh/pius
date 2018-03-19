@@ -177,8 +177,9 @@ def main():
   parser.add_option('-r', '--keyring', dest='keyring', metavar='KEYRING',
                     nargs=1, type='not_another_opt',
                     help='The keyring to use. Be sure to specify full or'
-                         ' relative path. Just a filename will cause GPG to'
-                         ' assume relative to ~/.gnupg. [default: %default]')
+                         ' relative path. Use a path: Just a filename may cause'
+                         ' GPG to assume relative to ~/.gnupg and cause'
+                         ' unexpected results. [default: %default]')
   parser.add_option('-s', '--signer', dest='signer', nargs=1,
                     type='keyid',
                     help='The keyid to sign with (required).')
