@@ -84,12 +84,26 @@ sub parse_fingerprints
         }
       }
 
-      if ($type eq '17') {
+      # cribbed from common/openpgpdefs.h in the gnupg source
+      # RSA, RSA encrypt-only (legacy), RSA sign-only (legacy)
+      if ($type eq '1' || $type eq '2' || $type eq '3') {
+        $type = 'RSA';
+      # ElGamal encrypt-only
+      } elsif ($type eq '16') {
+        $type = 'El Gamal';
+      } elsif ($type eq '17') {
         $type = 'DSA';
+      # RFC-6637, i.e. NISTP
+      } elsif ($type eq '18') {
+        $type = 'ECDH';
+      # RFC-6637, i.e. NISTP
+      } elsif ($type eq '19') {
+        $type = 'ECDSA';
+      # ElGamal encrypt+sign (legacy)
       } elsif ($type eq '20') {
         $type = 'El Gamal';
-      } elsif ($type eq '1') {
-        $type = 'RSA';
+      } elsif ($type eq '22') {
+        $type = 'EDDSA';
       } else {
         $type = 'Unknown';
       }
