@@ -6,7 +6,7 @@ Signing keys after a PGP Keysigning party can take a lot of time. Further,
 it's very difficult to do **right**: signing each UID separately and emailing it
 off is not something tools make easy. I wanted to solve both of those problems
 and make signing keys the right and most secure way easier and faster. PIUS and
-it's related tools make this process simple, faster, and easier to get right.
+its related tools make this process simple, faster, and easier to get right.
 
 ## Usage
 
