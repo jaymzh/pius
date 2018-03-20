@@ -6,7 +6,7 @@ Signing keys after a PGP Keysigning party can take a lot of time. Further,
 it's very difficult to do **right**: signing each UID separately and emailing it
 off is not something tools make easy. I wanted to solve both of those problems
 and make signing keys the right and most secure way easier and faster. PIUS and
-it's related tools make this process simple, faster, and easier to get right.
+its related tools make this process simple, faster, and easier to get right.
 
 ## Usage
 
@@ -19,9 +19,9 @@ $ pius -A -s <your_keyid> -r <path_to_keyring> -m <your_email>
 
 For every key (`-A`) on the keyring (`-r`) this will prompt you to verify the
 fingerprint and choose a signing level. Then, if you tell it to, it will sign
-all UIDs on &lt;keyid&gt;, and export one copy of the for each UID with only that UID
-signed. Each one will then be encrypt-emailed off to the email address in the
-UID (`-m`). Finally, `-s` tells it which key to sign with.
+all UIDs on &lt;keyid&gt;, and export one copy of the key for each UID with
+only that UID signed. Each one will then be encrypt-emailed off to the email
+address in the UID (`-m`). Finally, `-s` tells it which key to sign with.
 
 There are a variety of other options that you may want:
 * customize the tmpdir and outdir directories (-t and -o respectively)
@@ -105,7 +105,7 @@ tmp-dir=/home/you/pius/tmp
 use-agent
 ```
 
-PIUS will except `=`, `:` or whitespace as a separator, and will handle
+PIUS will accept `=`, `:` or whitespace as a separator, and will handle
 extra whitespace around any separator.
 
 ## History
