@@ -855,6 +855,8 @@ class PiusSigner(object):
   def import_unsigned_keys(self):
     '''Import all the unsigned keys from keyring to main keyring.'''
     print('Importing keyring...')
+    # Incase we've been given a pbx format file, which is unimportable,
+    # export to a file that is importable, and import that.
     cmd = [self.gpg] + self.gpg_base_opts + self.gpg_quiet_opts + [
         '--no-default-keyring',
         '--keyring', self.keyring,
