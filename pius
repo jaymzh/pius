@@ -316,7 +316,7 @@ def main():
   # If the user asked, import the keys
   if options.import_keyring:
     if (not options.keyring) or (options.keyring == DEFAULT_KEYRING):
-      print('WARNING: Ignoring -i: Either -r wasn\'t specified, or it was'
+      print('WARNING: Ignoring -I: Either -r wasn\'t specified, or it was'
             ' the same as the default keyring.')
     else:
       signer.import_unsigned_keys()

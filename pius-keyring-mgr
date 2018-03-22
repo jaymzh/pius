@@ -186,7 +186,13 @@ class KeyringBuilder(object):
 
   def __init__(self, gpg_path, keyring, keyservers, tmp_dir):
     self.gpg = gpg_path
-    self.keyring = keyring
+    if os.path.exists(keyring):
+      self.keyring = keyring
+      self.exported_keyring = None
+    else:
+      keyring_dir, keyring_file = os.path.split(keyring)
+      self.keyring = os.path.join(keyring_dir, '.pius.' + keyring_file)
+      self.exported_keyring = keyring
     self.found = []
     self.notfound = []
     self.keyservers = keyservers
@@ -395,6 +401,25 @@ Subject: %(party)sPGP Keysignign Party: Can't find your key!''' % interp
     keyids = [i[1] for i in sorted(key_tuples)]
     return keyids
 
+  def export_keyring(self):
+    '''
+    If we created a new keyring, it may not be in a suitable format for sharing.
+    So we go ahead and export it to the real filename which will force a
+    sahreable format. Once it exists, we'll continue to use it.
+    '''
+    if self.exported_keyring is None:
+      return
+    cmd = self.basecmd + self.QUIET_OPTS + [
+      '--export',
+      '--output', self.exported_keyring
+    ]
+    util.logcmd(cmd)
+    subprocess.call(cmd)
+    # Remove the temp file
+    os.remove(self.keyring)
+    # And GPG's backup
+    os.remove(self.keyring + '~')
+
   def prune(self):
     self._backup_keyring()
     keyids = self.get_all_keyids()
@@ -601,38 +626,36 @@ There are no options'''
 
   if mode == 'prune':
     kb.prune()
-    sys.exit(0)
-
-  if mode == 'raw':
+  elif mode == 'raw':
     kb.raw(args)
-    sys.exit(0)
+  elif mode == 'build':
+    keys = []
+    if options.mbox_file:
+      keys = parse_mbox(options.mbox_file)
 
-  # all that's left is mode == 'build'
-  if not mode == 'build':
+    if options.csv_file:
+      keys.extend(parse_csv(options.csv_file, options.delimiter,
+                            options.name_field, options.email_field,
+                            options.fp_field, options.ignore_emails,
+                            options.ignore_fps))
+
+    if not keys:
+      print("No keys IDs extract from CSV/mbox")
+      sys.exit(0)
+
+    if keys:
+      kb.get_all_keys(keys)
+      if options.verbose:
+        kb.print_report()
+      if options.mail:
+        kb.send_emails(options.mail, options.mail_override, options.party,
+                       options.mail_text)
+  else:
     print('Unrecognized mode %s' % mode)
     sys.exit(1)
 
-  keys = []
-  if options.mbox_file:
-    keys = parse_mbox(options.mbox_file)
-
-  if options.csv_file:
-    keys.extend(parse_csv(options.csv_file, options.delimiter,
-                          options.name_field, options.email_field,
-                          options.fp_field, options.ignore_emails,
-                          options.ignore_fps))
-
-  if not keys:
-    print("No keys IDs extract from CSV")
-    sys.exit(0)
-
-  if keys:
-    kb.get_all_keys(keys)
-    if options.verbose:
-      kb.print_report()
-    if options.mail:
-      kb.send_emails(options.mail, options.mail_override, options.party,
-                     options.mail_text)
+  # No matter what, we need to export into a common format
+  kb.export_keyring()
 
 if __name__ == '__main__':
   main()
