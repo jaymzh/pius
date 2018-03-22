@@ -60,6 +60,7 @@ have to type your passphrase for every key-UID combination.
 Both `interactive` and `cache_passphrase` mode will be removed in the next
 version when gpg1 support is dropped.
 
+
 ## Sending Emails
 
 When PIUS emails out keys it BCC's you, so you will get a copy of every email
@@ -86,11 +87,27 @@ fill in email (the email in the UID, i.e. the recipient), keyid (of the key that
 was signed), and signer (the keyid used to sign, i.e. your keyid). For example,
 you can simply include "%(keyid)s" (without the quotes) to get the keyid.
 
+PIUS's default config assumes there is a local mail delivery agent (MDA)
+available on port 587. If this is not the case for you, you'll want to specify
+your mail server's information using `-H` for smtp host, `-p` for port, and `-u`
+for username. For example, for GMail you might use:
 
-## License
+```
+-H smtp.gmail.com -p 587 -u <your_email@gmail.com>
+```
 
-PIUS is released under the GNU Public License v2 and is Copyright `Phil Dibowitz
-<phil@ipom.com>`.
+I recommend you add these settings to your config file so you don't have to type
+them every time. See the [Config File](#config-file) section below.
+
+Note that if you've setup 2-factor authentication with your mail provider, you
+will need an app-password for this to work. For GMail, [see their
+docs](https://support.google.com/accounts/answer/185833?hl=en).
+
+
+## Other Platforms
+
+On non-UNIX platforms such as MacOS and Windows, the default gpg path will
+likley be incorrect, so you'll want to use `-b` to specify the path.
 
 
 ## Config File
@@ -107,6 +124,7 @@ use-agent
 
 PIUS will accept `=`, `:` or whitespace as a separator, and will handle
 extra whitespace around any separator.
+
 
 ## History
 
@@ -133,6 +151,12 @@ This method quickly showed itself to be very fragile. So, I managed to bend gpg
 to my will without using pexpect, and the only thing left that uses pexpect is
 the 'interactive' mode, which will probably one day go away if gpg-agent
 becomes reliable enough.
+
+
+## License
+
+PIUS is released under the GNU Public License v2 and is Copyright `Phil Dibowitz
+<phil@ipom.com>`.
 
 
 Phil Dibowitz
