@@ -929,7 +929,7 @@ class PiusSigner(object):
             PiusSigner.GPG_SIG_CREATED in line or
             PiusSigner.GPG_PROGRESS in line or
             PiusSigner.GPG_PINENTRY_LAUNCHED in line or
-            PiusSigner.GPG_WARN_VERSION):
+            PiusSigner.GPG_WARN_VERSION in line):
         debug('Got skippable stuff')
         continue
       else:
