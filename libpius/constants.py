@@ -3,9 +3,6 @@
 import os
 
 VERSION = '2.2.6'
-MODE_INTERACTIVE = 0
-MODE_CACHE_PASSPHRASE = 1
-MODE_AGENT = 2
 HOME = os.environ.get('HOME')
 GNUPGHOME = os.environ.get('GNUPGHOME', os.path.join(HOME, '.gnupg'))
 DEFAULT_GPG_PATH = '/usr/bin/gpg2'
