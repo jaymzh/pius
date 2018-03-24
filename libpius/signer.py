@@ -12,9 +12,7 @@ import subprocess
 from six.moves import input
 
 from libpius.util import debug, clean_files, logcmd
-from libpius.constants import (
-  CERT_LEVEL_INFO, MODE_AGENT, MODE_CACHE_PASSPHRASE, MODE_INTERACTIVE
-)
+from libpius.constants import CERT_LEVEL_INFO
 from libpius.exceptions import (
   AgentError, EncryptionKeyError, EncryptionUnknownError, GpgUnknownError,
   MailSendError, NoSelfKeyError, PassphraseError
@@ -47,7 +45,7 @@ class PiusSigner(object):
   GPG_WARN_VERSION = '[GNUPG:] WARNING server_version_mismatch'
   GPG_ENC_COMPLIANT_MODE = '[GNUPG:] ENCRYPTION_COMPLIANCE_MODE'
 
-  def __init__(self, signer, force_signer, mode, keyring, gpg_path, tmpdir,
+  def __init__(self, signer, force_signer, keyring, gpg_path, tmpdir,
                outdir, encrypt_outfiles, mail, mailer, verbose, sort_keyring,
                policy_url, mail_host):
     self.signer = signer
@@ -58,7 +56,6 @@ class PiusSigner(object):
       # If force_signer is specified make sure that gpg uses this keyid by
       # putting '!' at the end
       self.force_signer = force_signer + '!'
-    self.mode = mode
     self.keyring = keyring
     self.sort_keyring = sort_keyring
     self.gpg = gpg_path
@@ -68,14 +65,14 @@ class PiusSigner(object):
     self.mail = mail
     self.mailer = mailer
     self.verbose = verbose
-    self.passphrase = ''
     self.tmp_keyring = '%s/%s' % (self.tmpdir, PiusSigner.TMP_KEYRING_FILE)
     self.policy_url = policy_url
     self.mail_host = mail_host
     self.null = open(os.path.devnull, 'w')
     self.gpg_base_opts = [
-          '--keyid-format', 'long',
-          '--no-auto-check-trustdb',
+        '--use-agent',
+        '--keyid-format', 'long',
+        '--no-auto-check-trustdb',
     ]
     self.gpg_quiet_opts = [
           '-q',
@@ -86,23 +83,9 @@ class PiusSigner(object):
           '--command-fd', '0',
           '--status-fd', '1',
     ]
-    self.gpg2 = self._is_gpg2()
+    self.gpg2 = self._gpg2
 
-    if not self.gpg2:
-        self.gpg_fd_opts += ['--passphrase-fd', '0',]
-
-    if self.mode == MODE_INTERACTIVE:
-      try:
-        global pexpect
-        import pexpect
-        global quote
-        from pipes import quote
-      except ImportError:
-        # FIXME: parser is not passed to class
-        parser.error('You chose interactive mode but do not have the pexpect'
-                     ' module installed.')
-
-  def _is_gpg2(self):
+  def _gpg2(self):
     cmd = [self.gpg, '--version']
     logcmd(cmd)
     gpg = subprocess.Popen(
@@ -127,9 +110,6 @@ class PiusSigner(object):
       sys.exit(1)
 
     return v.startswith('2.')
-
-  def is_gpg2(self):
-    return self.gpg2
 
   def _outfile_path(self, ofile):
     '''Internal function to take a filename and put it in self.outdir.'''
@@ -230,63 +210,6 @@ class PiusSigner(object):
       elif ans in ('q', 'Q'):
         print('Dying at user request')
         sys.exit(1)
-
-  def get_passphrase(self):
-    '''Prompt the user for their passphrase.'''
-    self.passphrase = getpass.getpass('Please enter your PGP passphrase: ')
-
-  def verify_passphrase(self):
-    '''Verify a passpharse gotten from get_passpharse().'''
-    magic_string = 'test1234'
-    filename = self._tmpfile_path('pius_tmp')
-    filename_enc = self._tmpfile_path('pius_tmp.gpg')
-    filename_dec = self._tmpfile_path('pius_tmp2')
-    clean_files([filename, filename_enc, filename_dec])
-    tfile = open(filename, 'w')
-    tfile.write(magic_string)
-    tfile.close()
-    cmd = [self.gpg] + self.gpg_base_opts + self.gpg_quiet_opts + [
-        '--no-armor',
-        '--always-trust',
-        '-r', self.signer,
-        '-e', filename,
-    ]
-    logcmd(cmd)
-    subprocess.call(cmd, stdout=self.null, stderr=self.null, close_fds=True)
-    cmd = [self.gpg] + self.gpg_base_opts + self.gpg_quiet_opts + \
-      self.gpg_fd_opts + [
-          '--output', filename_dec,
-          '-d', filename_enc,
-      ]
-    logcmd(cmd)
-    gpg = subprocess.Popen(cmd, stdin=subprocess.PIPE,
-                           stdout=subprocess.PIPE,
-                           stderr=self.null,
-                           close_fds=True)
-
-    debug('Sending passphrase')
-    gpg.stdin.write('%s\n' % self.passphrase)
-
-    line = gpg.stdout.read()
-    debug('wait()ing on gpg')
-    retval = gpg.wait()
-    if retval != 0:
-      debug('gpg decrypt return code %s' % retval)
-      clean_files([filename, filename_enc, filename_dec])
-      return False
-
-    if not os.path.exists(filename_dec):
-      debug('Resulting file %s not found' % filename_dec)
-      clean_files([filename, filename_enc, filename_dec])
-      return False
-    tfile = open(filename_dec, 'r')
-    line = tfile.readline()
-    tfile.close()
-    clean_files([filename, filename_enc, filename_dec])
-    if line == magic_string:
-      return True
-    debug('File does not contain magic string')
-    return False
 
   def get_uids(self, key):
     '''Get all UIDs on a given key.'''
@@ -540,54 +463,6 @@ class PiusSigner(object):
     else:
       return []
 
-  #
-  # NOTE:
-  #    This is a sucky hack. I may just completely delete it one day. The only
-  #    reason it's still here is because agent support is flaky and some people
-  #    may not like us storing their passphrase in memory.
-  #
-  def sign_uid_expect(self, key, index, level):
-    '''Sign a UID, using the expect stuff. Interactive mode.'''
-    cmd = [self.gpg] + self.gpg_base_opts + [
-        '--no-default-keyring',
-        '--keyring', self.tmp_keyring,
-        '--default-cert-level', level,
-        '--no-ask-cert-level',
-        '--no-use-agent',
-        '--edit-key', key,
-    ] + self.policy_opts()
-    logcmd(cmd)
-    gpg = pexpect.spawn(' '.join((quote(arg) for arg in cmd)))
-    gpg.setecho(False)
-    gpg.expect('gpg> ')
-    debug('Selecting UID %s' % index)
-    gpg.sendline(str(index))
-    gpg.expect('gpg> ')
-    debug('Running sign subcommand')
-    gpg.sendline('sign')
-    line = gpg.readline()
-    if 'already signed' in line:
-      print('  UID already signed')
-      return False
-    # else it's a blank line...
-
-    gpg.expect(re.compile('Really sign.*'))
-    debug('Confirming signing')
-    gpg.sendline('y')
-    # Tell the user how to get out of this, and then drop them into the gpg
-    # shell.
-    print('\n\nPassing you to gpg for passphrase.')
-    print('Hit ^] after succesfully typing in your passphrase')
-    gpg.interact()
-    # When we return, we have a Command> prompt that w can't
-    # 'expect'... or at least if the user did it right
-    print('')
-    # Unselect this UID
-    debug('unselecting uid')
-    debug('Saving key')
-    gpg.sendline('save')
-    return True
-
   def gpg_wait_for_string(self, fd, string):
     '''Look for a specific string on the status-fd.'''
     line = ''
@@ -600,18 +475,12 @@ class PiusSigner(object):
       debug('got line %s' % line)
 
   def sign_uid(self, key, index, level):
-    '''Sign a single UID of a key.
-
-    This can use either cached passpharse or gpg-agent.'''
-    agent = []
-    if self.mode == MODE_AGENT:
-      agent = ['--use-agent']
+    '''Sign a single UID of a key.'''
     keyring = ['--no-default-keyring', '--keyring', self.tmp_keyring]
-    # Note that if passphrase-fd is different from command-fd, nothing works.
     cmd = [self.gpg] + self.gpg_base_opts + self.gpg_quiet_opts + \
       self.gpg_fd_opts + keyring + [
           '-u', self.force_signer,
-      ] + agent + self.policy_opts() + [
+      ] + self.policy_opts() + [
           '--default-cert-level', level,
           '--no-ask-cert-level',
           '--edit-key', key,
@@ -621,17 +490,6 @@ class PiusSigner(object):
                            stdout=subprocess.PIPE,
                            stderr=self.null,
                            close_fds=True)
-
-    if self.mode == MODE_AGENT:
-      # For some reason when using agent an initial enter is needed
-      if not self.gpg2:
-          gpg.stdin.write('\n')
-    else:
-      # For some unidentified reason you must send the passphrase
-      # first, not when it asks for it.
-      debug('Sending passphrase')
-      gpg.stdin.write('%s\n' % self.passphrase)
-
 
     debug('Waiting for prompt')
     self.gpg_wait_for_string(gpg.stdout, PiusSigner.GPG_PROMPT)
@@ -716,16 +574,12 @@ class PiusSigner(object):
         print('  ERROR: Agent didn\'t provide passphrase to PGP.')
         raise AgentError
       if 'BAD_PASSPHRASE' in line:
-        if self.mode == MODE_AGENT:
-          line = gpg.stdout.readline()
-          debug('Got %s' % line)
-          if 'USERID_HINT' in line:
-            continue
-          print('  ERROR: Agent reported the passphrase was incorrect.')
-          raise AgentError
-        else:
-          print('  ERROR: GPG didn\'t accept the passphrase.')
-          raise PassphraseError
+        line = gpg.stdout.readline()
+        debug('Got %s' % line)
+        if 'USERID_HINT' in line:
+          continue
+        print('  ERROR: Agent reported the passphrase was incorrect.')
+        raise AgentError
       if 'GOOD_PASSPHRASE' in line:
         break
       if PiusSigner.GPG_PROMPT in line:
@@ -779,22 +633,19 @@ class PiusSigner(object):
       self.import_clean_key(key)
 
       # Sign the key...
-      if self.mode in (MODE_CACHE_PASSPHRASE, MODE_AGENT):
-        try:
-          res = self.sign_uid(key, uid['index'], level)
-        except AgentError:
-          print('\ngpg-agent problems, bailing out!')
-          sys.exit(1)
-        except PassphraseError:
-          print('\nThe passphrase that worked a moment ago now doesn\'t work.'
-                 ' I\'m bailing out!')
-          sys.exit(1)
-        except NoSelfKeyError:
-          print('\nWe don\'t have our own key, according to GnuPG.')
-          # No need to say anything else
-          sys.exit(1)
-      else:
-        res = self.sign_uid_expect(key, uid['index'], level)
+      try:
+        res = self.sign_uid(key, uid['index'], level)
+      except AgentError:
+        print('\ngpg-agent problems, bailing out!')
+        sys.exit(1)
+      except PassphraseError:
+        print('\nThe passphrase that worked a moment ago now doesn\'t work.'
+               ' I\'m bailing out!')
+        sys.exit(1)
+      except NoSelfKeyError:
+        print('\nWe don\'t have our own key, according to GnuPG.')
+        # No need to say anything else
+        sys.exit(1)
       if not res:
         uid['result'] = False
         continue
@@ -872,11 +723,8 @@ class PiusSigner(object):
     '''Encrypt and sign a file.
 
     Used for PGP/Mime email generation.'''
-    agent = []
-    if self.mode == MODE_AGENT:
-      agent = ['--use-agent']
     cmd = [self.gpg] + self.gpg_base_opts +  self.gpg_quiet_opts + \
-      self.gpg_fd_opts + agent + [
+      self.gpg_fd_opts + [
           '--no-default-keyring',
           '--keyring', self.tmp_keyring,
           '--no-options',
@@ -894,14 +742,8 @@ class PiusSigner(object):
                            stderr=self.null,
                            close_fds=True)
 
-    if self.mode == MODE_AGENT:
-      # For some reason when using agent an initial enter is needed
-      gpg.stdin.write('\n')
-    else:
-      # For some unidentified reason you must send the passphrase
-      # first, not when it asks for it.
-      debug('Sending passphrase')
-      gpg.stdin.write('%s\n' % self.passphrase)
+    # For some reason when using agent an initial enter is needed
+    gpg.stdin.write('\n')
 
     skippable = [
       PiusSigner.GPG_USERID,

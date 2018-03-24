@@ -40,27 +40,9 @@ And more! See the '-h' option for more.
 
 ## Security Implications
 
-The default mode for PIUS, starting in 2.2.0 is `agent` mode. If you
-are using gpg2 this is the only valid mode.
-
-If you aren't using gpg2, there are some other options. If you use
-`cache_passphrase` mode. This means that PIUS will ask you for your passphrase
-at startup, verify this passphrase is correct, and then feed it GnuPG everytime
-it needs it. The passphrase is stored in memory and only for the life of the
-execution of PIUS.  For most users this should be relatively safe. However, it
-is worth noting that if you are on a machine whose system administrators you
-don't trust, there is a small danger of them reading this memory while PIUS is
-running.
-
-Finally we have `interactive` mode which can be entered using -i. This will use
-pexpect to handle most of the signing interactions and then drop you into the
-'gpg --edit-key' shell whenever gpg needs a passphrase. Using this you can enter
-your passphrase directly into gpg. This mode has two main disadvantages. The
-first is that the pexpect code is quite fragile, and the second is that you'll
-have to type your passphrase for every key-UID combination.
-
-Both `interactive` and `cache_passphrase` mode will be removed in the next
-version when gpg1 support is dropped.
+As of 3.0, PIUS only works with gpg2 and later, and thus only works
+with a GPG Agent. Therefore, PIUS can never come into contact with your
+passphrase or your unencrypted private key.
 
 
 ## Sending Emails
@@ -150,9 +132,9 @@ not to be not that well documented and not work the way the documentation
 suggested.
 
 This method quickly showed itself to be very fragile. So, I managed to bend gpg
-to my will without using pexpect, and the only thing left that uses pexpect is
-the 'interactive' mode, which will probably one day go away if gpg-agent
-becomes reliable enough.
+to my will without using pexpect, and the only thing left that uses pexpect was
+the 'interactive' mode, which has been removed now that gpg-agent is both
+required in gpg 2.x and stable.
 
 
 ## License
