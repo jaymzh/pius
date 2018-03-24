@@ -899,6 +899,17 @@ class PiusSigner(object):
       debug('Sending passphrase')
       gpg.stdin.write('%s\n' % self.passphrase)
 
+    skippable = [
+      PiusSigner.GPG_USERID,
+      PiusSigner.GPG_NEED_PASS,
+      PiusSigner.GPG_GOOD_PASS,
+      PiusSigner.GPG_SIG_BEG,
+      PiusSigner.GPG_SIG_CREATED,
+      PiusSigner.GPG_PROGRESS,
+      PiusSigner.GPG_PINENTRY_LAUNCHED,
+      PiusSigner.GPG_WARN_VERSION,
+    ]
+
     while True:
       debug('Waiting for response')
       line = gpg.stdout.readline().strip()
@@ -922,14 +933,7 @@ class PiusSigner(object):
         # we get a ENC_INV.
         debug('Got GPG_KEY/SIG_EXP')
         continue
-      elif (PiusSigner.GPG_USERID in line or
-            PiusSigner.GPG_NEED_PASS in line or
-            PiusSigner.GPG_GOOD_PASS in line or
-            PiusSigner.GPG_SIG_BEG in line or
-            PiusSigner.GPG_SIG_CREATED in line or
-            PiusSigner.GPG_PROGRESS in line or
-            PiusSigner.GPG_PINENTRY_LAUNCHED in line or
-            PiusSigner.GPG_WARN_VERSION in line):
+      elif any([s in line for s in skippable]):
         debug('Got skippable stuff')
         continue
       else:
