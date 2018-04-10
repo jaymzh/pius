@@ -3,7 +3,6 @@ import getpass
 import os
 import smtplib
 import socket
-import os
 
 from email import message, quoprimime
 from email.utils import formatdate
