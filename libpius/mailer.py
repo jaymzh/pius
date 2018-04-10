@@ -268,7 +268,7 @@ class PiusMailer(object):
     if self.local_mail_dir:
       if not os.path.isdir(self.local_mail_dir):
         os.mkdir(self.local_mail_dir)
-      if not self.address_ovrride:
+      if not self.address_override:
         msg['Bcc'] = self.mail
       email = open(os.path.join(self.local_mail_dir, msg['To']), 'w')
       email.write(str(msg))
