@@ -20,9 +20,10 @@ from libpius.util import clean_files, debug
 
 
 class PiusMailer(object):
-  def __init__(self, mail, host, port, user, tls, no_mime, override, msg_text,
-               tmp_dir):
+  def __init__(self, mail, display_name, host, port, user, tls, no_mime,
+               override, msg_text, tmp_dir):
     self.mail = mail
+    self.display_name = display_name
     self.host = host
     self.port = port
     self.user = user
