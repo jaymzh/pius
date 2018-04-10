@@ -133,11 +133,12 @@ def check_keyid(_, opt, value):
 
 class MyOption(Option):
   '''Our own option class.'''
-  TYPES = Option.TYPES + ('not_another_opt', 'email', 'keyid')
+  TYPES = Option.TYPES + ('not_another_opt', 'email', 'display_name', 'keyid')
   TYPE_CHECKER = copy(Option.TYPE_CHECKER)
   TYPE_CHECKER.update({
       'not_another_opt': check_not_another_opt,
       'email': check_email,
+      'display_name': check_display_name,
       'keyid': check_keyid,
   })
 
