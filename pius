@@ -235,6 +235,7 @@ def main():
   if options.mail:
     mailer = pmailer.PiusMailer(
         options.mail,
+        options.display_name,
         options.mail_host,
         options.mail_port,
         options.mail_user,
