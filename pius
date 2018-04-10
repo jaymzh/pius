@@ -163,6 +163,9 @@ def main():
                     help='Email the encrypted, signed keys to the'
                          ' respective email addresses. EMAIL is the address'
                          ' to send from. See also -H and -P.')
+  parser.add_option('-D', '--display-name', dest='display_name', metavar="NAME",
+                    type='display_name',
+                    help='Email name to display, e.g., NAME <example@example.com>')
   parser.add_option('-N', '--no-sort-keyring', dest='sort_keyring',
                     action='store_false',
                     help='Do not sort the keyring by name.')
