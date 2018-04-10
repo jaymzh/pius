@@ -115,6 +115,14 @@ def check_email(_, opt, value):
                            ' formed email address' % (opt, value))
   return value
 
+def check_display_name(_, opt, value):
+  '''Ensure argument is a valid email display name.'''
+  match = re.search(r'[()<>[\]:;@\\,."]', value)
+  if match:
+    raise OptionValueError('Option %s: Value %s contains one or more illegal'
+                           ' characters' % (opt, value))
+  return value
+
 def check_keyid(_, opt, value):
   '''Ensure argument seems like a keyid.'''
   match = re.match(r'[0-9a-fA-Fx]', value)
