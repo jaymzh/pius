@@ -252,7 +252,10 @@ class PiusMailer(object):
     # We don't duplicate the header logic in the sub functions, we
     # do that here
     debug("send_mail called with to (%s), subject (%s)" % (to, msg['subject']))
-    msg['From'] = self.mail
+    if self.display_name:
+      msg['From'] = self.display_name + ' <' + self.mail + '>'
+    else:
+      msg['From'] = self.mail
     if self.address_override:
       msg['To'] = self.address_override
     else:
