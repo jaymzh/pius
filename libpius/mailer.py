@@ -301,9 +301,9 @@ class PiusMailer(object):
           # BCC the user...
           env_to = [msg['To'], self.mail]
 
-      smtp.sendmail(self.mail, env_to, msg.as_string())
-      smtp.quit()
-    except smtplib.SMTPException as emsg:
-      raise MailSendError(emsg)
-    except socket.error as emsg:
-      raise MailSendError(emsg)
+        smtp.sendmail(self.mail, env_to, msg.as_string())
+        smtp.quit()
+      except smtplib.SMTPException as emsg:
+        raise MailSendError(emsg)
+      except socket.error as emsg:
+        raise MailSendError(emsg)
