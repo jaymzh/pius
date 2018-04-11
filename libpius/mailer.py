@@ -295,6 +295,11 @@ class PiusMailer(object):
           # Don't want to send auth information unless we're TLS'd
           if self.user:
             smtp.login(self.user, self.password)
+        if self.address_override:
+          env_to = self.address_override
+        else:
+          # BCC the user...
+          env_to = [msg['To'], self.mail]
 
       smtp.sendmail(self.mail, env_to, msg.as_string())
       smtp.quit()
