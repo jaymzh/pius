@@ -159,7 +159,7 @@ def main():
                          ' specified, or if it\'s the same as the default'
                          ' keyring.')
   parser.add_option('-L', '--save-to-mail-dir', dest='local_mail_dir',
-                    metavar='FILE',
+                    metavar='DIRECTORY',
                     help='Instead of calling SMTP, save'
                          ' the email to this directory.')
   parser.add_option('-m', '--mail', dest='mail', metavar='EMAIL', nargs=1,
