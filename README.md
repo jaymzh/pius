@@ -1,5 +1,7 @@
 # PIUS: The PGP Individual UID Signer
 
+![CircleCI](https://circleci.com/gh/jaymzh/pius.svg?style=svg)](https://circleci.com/gh/jaymzh/pius)
+
 ## Introduction
 
 Signing keys after a PGP Keysigning party can take a lot of time. Further,

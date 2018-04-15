@@ -304,13 +304,14 @@ def main():
 
   # The actual signing
   signed_keys = {}
+  state = SignState()
   for key in key_list:
     retval = signer.check_fingerprint(key)
     if retval == False:
       continue
     print('Signing all UIDs on key %s' % key)
     if signer.sign_all_uids(key, retval):
-      signed_keys[key] = True
+      state.update_outbound(key, SignState.kSIGNED)
     print('')
 
   # If the user asked, import the keys
@@ -322,7 +323,7 @@ def main():
       signer.import_unsigned_keys()
 
   signer.cleanup()
-  SignState.store_signed_keys(dict((x, SignState.kSIGNED) for x in signed_keys))
+  state.save()
 
 if __name__ == '__main__':
   main()
