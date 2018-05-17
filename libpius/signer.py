@@ -45,6 +45,7 @@ class PiusSigner(object):
   GPG_PINENTRY_LAUNCHED = '[GNUPG:] PINENTRY_LAUNCHED'
   GPG_KEY_CONSIDERED = '[GNUPG:] KEY_CONSIDERED'
   GPG_WARN_VERSION = '[GNUPG:] WARNING server_version_mismatch'
+  GPG_ENC_COMPLIANT_MODE = '[GNUPG:] ENCRYPTION_COMPLIANCE_MODE'
 
   def __init__(self, signer, force_signer, mode, keyring, gpg_path, tmpdir,
                outdir, encrypt_outfiles, mail, mailer, verbose, sort_keyring,
@@ -430,6 +431,9 @@ class PiusSigner(object):
       debug('Got %s' % line)
       if PiusSigner.GPG_ENC_BEG in line:
         debug('Got GPG_ENC_BEG')
+        continue
+      elif PiusSigner.GPG_ENC_COMPLIANT_MODE in line:
+        debug('Got ENCRYPTION_COMPLIANCE_MODE')
         continue
       elif PiusSigner.GPG_ENC_END in line:
         debug('Got GPG_ENC_END')
