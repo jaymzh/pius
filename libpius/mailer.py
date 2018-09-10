@@ -20,9 +20,10 @@ from libpius.util import clean_files, debug
 
 
 class PiusMailer(object):
-  def __init__(self, mail, host, port, user, tls, no_mime, override, msg_text,
-               tmp_dir):
+  def __init__(self, mail, display_name, host, port, user, tls, no_mime,
+               override, msg_text, tmp_dir):
     self.mail = mail
+    self.display_name = display_name
     self.host = host
     self.port = port
     self.user = user
@@ -251,7 +252,10 @@ class PiusMailer(object):
     # We don't duplicate the header logic in the sub functions, we
     # do that here
     debug("send_mail called with to (%s), subject (%s)" % (to, msg['subject']))
-    msg['From'] = self.mail
+    if self.display_name:
+      msg['From'] = self.display_name + ' <' + self.mail + '>'
+    else:
+      msg['From'] = self.mail
     if self.address_override:
       msg['To'] = self.address_override
     else:

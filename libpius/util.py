@@ -115,6 +115,14 @@ def check_email(_, opt, value):
                            ' formed email address' % (opt, value))
   return value
 
+def check_display_name(_, opt, value):
+  '''Ensure argument is a valid email display name.'''
+  match = re.search(r'[()<>[\]:;@\\,."]', value)
+  if match:
+    raise OptionValueError('Option %s: Value %s contains one or more illegal'
+                           ' characters' % (opt, value))
+  return value
+
 def check_keyid(_, opt, value):
   '''Ensure argument seems like a keyid.'''
   match = re.match(r'[0-9a-fA-Fx]', value)
@@ -125,11 +133,12 @@ def check_keyid(_, opt, value):
 
 class MyOption(Option):
   '''Our own option class.'''
-  TYPES = Option.TYPES + ('not_another_opt', 'email', 'keyid')
+  TYPES = Option.TYPES + ('not_another_opt', 'email', 'display_name', 'keyid')
   TYPE_CHECKER = copy(Option.TYPE_CHECKER)
   TYPE_CHECKER.update({
       'not_another_opt': check_not_another_opt,
       'email': check_email,
+      'display_name': check_display_name,
       'keyid': check_keyid,
   })
 
