@@ -133,4 +133,19 @@ class MyOption(Option):
       'keyid': check_keyid,
   })
 
+  def which(pgm):
+    path=os.getenv('PATH')
+    for p in path.split(os.path.pathsep):
+      p=os.path.join(p,pgm)
+      if os.path.exists(p) and os.access(p,os.X_OK):
+          return p
+      else:
+          return ""
+
+  def gpg_path_test():
+      if(which("gpg2") != ""):
+          return which("gpg2")
+      else:
+          return "/usr/bin/gpg2"
+
 # END Stupid python optparse hack.

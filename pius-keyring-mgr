@@ -34,7 +34,7 @@ DEFAULT_KEYSERVERS = [
 ]
 HOME = os.environ.get('HOME')
 GNUPGHOME = os.environ.get('GNUPGHOME', os.path.join(HOME, '.gnupg'))
-DEFAULT_GPG_PATH = '/usr/bin/gpg'
+DEFAULT_GPG_PATH = gpg_path_test()
 DEFAULT_CSV_DELIMITER = ','
 DEFAULT_CSV_NAME_FIELD = 2
 DEFAULT_CSV_EMAIL_FIELD = 3
@@ -453,7 +453,7 @@ Subject: %(party)sPGP Keysignign Party: Can't find your key!''' % interp
     util.logcmd(cmd)
     ret = subprocess.call(cmd, shell=False)
     sys.exit(ret)
-   
+
 # END class KeyringBuilder
 
 
