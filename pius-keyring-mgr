@@ -25,6 +25,7 @@ import sys
 from six.moves import input
 
 from libpius import util
+from libpius import path
 from libpius.constants import VERSION
 
 BADKEYS_RE = re.compile(r'00000000|12345678|no pgp key')
@@ -34,7 +35,7 @@ DEFAULT_KEYSERVERS = [
 ]
 HOME = os.environ.get('HOME')
 GNUPGHOME = os.environ.get('GNUPGHOME', os.path.join(HOME, '.gnupg'))
-DEFAULT_GPG_PATH = gpg_path_test()
+DEFAULT_GPG_PATH = path.gpg_test()
 DEFAULT_CSV_DELIMITER = ','
 DEFAULT_CSV_NAME_FIELD = 2
 DEFAULT_CSV_EMAIL_FIELD = 3
