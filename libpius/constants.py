@@ -1,11 +1,12 @@
 # vim:shiftwidth=2:tabstop=2:expandtab:textwidth=80:softtabstop=2:ai:
 
 import os
+import util
 
 VERSION = '2.2.6'
 HOME = os.environ.get('HOME')
 GNUPGHOME = os.environ.get('GNUPGHOME', os.path.join(HOME, '.gnupg'))
-DEFAULT_GPG_PATH = '/usr/bin/gpg2'
+DEFAULT_GPG_PATH = gpg_path_test()
 DEFAULT_KEYRING = os.path.join(GNUPGHOME, 'pubring.gpg')
 DEFAULT_TMP_DIR = '/tmp/pius_tmp'
 DEFAULT_OUT_DIR = '/tmp/pius_out'
