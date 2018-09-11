@@ -1,18 +1,18 @@
 # vim:shiftwidth=2:tabstop=2:expandtab:textwidth=80:softtabstop=2:ai:
 
 import os
-import path
+from libpius import path
 
 VERSION = '2.2.6'
-HOME = os.environ.get('HOME')
-GNUPGHOME = os.environ.get('GNUPGHOME', os.path.join(HOME, '.gnupg'))
+HOME = path.get_home()
+GNUPGHOME = path.get_gpghome(HOME)
 DEFAULT_GPG_PATH = path.gpg_test()
 DEFAULT_KEYRING = os.path.join(GNUPGHOME, 'pubring.gpg')
 DEFAULT_TMP_DIR = '/tmp/pius_tmp'
 DEFAULT_OUT_DIR = '/tmp/pius_out'
 DEFAULT_MAIL_HOST = 'localhost'
 DEFAULT_MAIL_PORT = 587
-PIUS_HOME = os.path.join(HOME, '.pius')
+PIUS_HOME = path.get_piushome(HOME)
 PIUS_RC = os.path.join(PIUS_HOME, 'piusrc')
 
 # Note the line with the email address on it below is intentionally

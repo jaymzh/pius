@@ -33,8 +33,8 @@ LIST_SEP_RE = re.compile(r'\s*,\s*')
 DEFAULT_KEYSERVERS = [
     'pool.sks-keyservers.net', 'pgp.mit.edu', 'keys.gnupg.net'
 ]
-HOME = os.environ.get('HOME')
-GNUPGHOME = os.environ.get('GNUPGHOME', os.path.join(HOME, '.gnupg'))
+HOME = path.get_home()
+GNUPGHOME = path.get_gpghome(HOME)
 DEFAULT_GPG_PATH = path.gpg_test()
 DEFAULT_CSV_DELIMITER = ','
 DEFAULT_CSV_NAME_FIELD = 2

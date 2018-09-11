@@ -1,4 +1,6 @@
 '''A set of path functions and variables for the PIUS suite.'''
+from __future__ import print_function
+
 import os
 import sys
 import stat
@@ -68,5 +70,29 @@ def which(cmd, mode=os.F_OK | os.X_OK, path=None):
     return None
 
 def gpg_test():
-    return which('gpg2')
+    gpg = which('gpg2')
+    if gpg == "":
+        print("GPG2 could not be found! Is it accessable to $PATH?")
+        sys.exit(1)
+    else:
+        return gpg
+
+def get_home():
+    if sys.platform == "win32":
+        return os.environ.get('APPDATA')
+    else:
+        return os.environ.get('HOME')
+
+def get_gpghome(HOME):
+    if sys.platform == "win32":
+        return os.environ.get('GNUPGHOME', os.path.join(HOME, 'roaming\/gnupg'))
+    else:
+        return os.environ.get('GNUPGHOME', os.path.join(HOME, '.gnupg'))
+
+def get_piushome(HOME):
+    if sys.platform == "win32":
+        return os.path.join(HOME, 'roaming\/pius')
+    else:
+        return os.path.join(HOME, '.pius')
+
 # END Stupid python optparse hack.
