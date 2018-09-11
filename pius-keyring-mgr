@@ -40,7 +40,7 @@ DEFAULT_CSV_DELIMITER = ','
 DEFAULT_CSV_NAME_FIELD = 2
 DEFAULT_CSV_EMAIL_FIELD = 3
 DEFAULT_CSV_FP_FIELD = 4
-DEFAULT_TMP_DIR = '/tmp/pius_keyring_mgr_tmp'
+DEFAULT_TMP_DIR = path.set_tmpdir('pius_keyring_mgr_tmp')
 
 DEFAULT_EMAIL_TEXT = '''Dear %(name)s,
 
