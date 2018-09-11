@@ -95,4 +95,15 @@ def get_piushome(HOME):
     else:
         return os.path.join(HOME, '.pius')
 
+def set_tmpdir(dir):
+    if sys.platform == "win32":
+        TMP = os.environ.get('TEMP')
+        return os.path.join(TMP, dir)
+    elif sys.platform == "darwin":
+        TMP = '/private/tmp/'
+        return os.path.join(TMP, dir)
+    else:
+        TMP = '/tmp/'
+        return os.path.join(TMP, dir)
+
 # END Stupid python optparse hack.
