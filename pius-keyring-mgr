@@ -25,6 +25,7 @@ import sys
 from six.moves import input
 
 from libpius import util
+from libpius import path
 from libpius.constants import VERSION
 
 BADKEYS_RE = re.compile(r'00000000|12345678|no pgp key')
@@ -32,14 +33,14 @@ LIST_SEP_RE = re.compile(r'\s*,\s*')
 DEFAULT_KEYSERVERS = [
     'pool.sks-keyservers.net', 'pgp.mit.edu', 'keys.gnupg.net'
 ]
-HOME = os.environ.get('HOME')
-GNUPGHOME = os.environ.get('GNUPGHOME', os.path.join(HOME, '.gnupg'))
-DEFAULT_GPG_PATH = '/usr/bin/gpg'
+HOME = path.get_home()
+GNUPGHOME = path.get_gpghome(HOME)
+DEFAULT_GPG_PATH = path.gpg_test()
 DEFAULT_CSV_DELIMITER = ','
 DEFAULT_CSV_NAME_FIELD = 2
 DEFAULT_CSV_EMAIL_FIELD = 3
 DEFAULT_CSV_FP_FIELD = 4
-DEFAULT_TMP_DIR = '/tmp/pius_keyring_mgr_tmp'
+DEFAULT_TMP_DIR = path.set_tmpdir('pius_keyring_mgr_tmp')
 
 DEFAULT_EMAIL_TEXT = '''Dear %(name)s,
 
@@ -453,7 +454,7 @@ Subject: %(party)sPGP Keysignign Party: Can't find your key!''' % interp
     util.logcmd(cmd)
     ret = subprocess.call(cmd, shell=False)
     sys.exit(ret)
-   
+
 # END class KeyringBuilder
 
 
