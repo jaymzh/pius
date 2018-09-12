@@ -99,11 +99,21 @@ def set_tmpdir(dir):
     if sys.platform == "win32":
         TMP = os.environ.get('TEMP')
         return os.path.join(TMP, dir)
-    elif sys.platfrom == "darwin":
-        TMP = '/private/tmp/'
+    elif sys.platform == "darwin":
+        if os.environ.get('USER') == "root":
+            TMP = '/private/tmp/'
+        else:
+            TMP = os.environ.get('TMPDIR')
         return os.path.join(TMP, dir)
     else:
-        TMP = '/tmp/'
+        if os.environ.get('USER') == "root":
+            return os.path.join('/tmp/', dir)
+        elif os.environ.get('XDG_RUNTIME_DIR') != "":
+            return os.path.join(os.environ.get('XDG_RUNTIME_DIR'), dir)
+        elif os.environ.get('TMPDIR') != "":
+            return os.path.join(os.environ.get('TMPDIR'), dir)
+        else:
+            TMP = '/tmp/'
         return os.path.join(TMP, dir)
 
 # END Stupid python optparse hack.
