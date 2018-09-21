@@ -8,6 +8,8 @@ from libpius.constants import BIN_PATHs, LINUX_TEMPDIR
 from os.path import abspath
 import fnmatch
 
+LINUX_TEMPDIR = '/tmp/'
+BIN_PATHS = '/usr/bin;/usr/sbin/;/bin;/sbin;/usr/local/bin;/usr/local/sbin'
 '''This is grabbed right from the python repo under lib/shutil.py'''
 
 def which(cmd, mode=os.F_OK | os.X_OK, path=None):
