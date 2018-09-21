@@ -70,6 +70,7 @@ def which(cmd, mode=os.F_OK | os.X_OK, path=None):
                 if _access_check(name, mode):
                     return name
     return None
+#end of "Which" function
 
 def gpg_path():
     if sys.platform = "win32":
@@ -111,14 +112,13 @@ def get_tmpdir(dir):
             tempdir = os.environ.get('TMPDIR')
         return os.path.join(tempdir, dir)
     else:
+        #When installing on a linux/unix system it needs root privilege
+        #root doesn't have a temp directory in its enviornment variables
+        #hard code the path for /tmp/
         if os.environ.get('USER') == "root":
             tempdir = os.path.join(LINUX_TEMPDIR, dir)
-        elif os.environ.get('XDG_RUNTIME_DIR') != "":
-            tempdir = os.path.join(os.environ.get('XDG_RUNTIME_DIR'), dir)
         elif os.environ.get('TMPDIR') != "":
             tempdir = os.path.join(os.environ.get('TMPDIR'), dir)
         else:
             tempdir = os.path.join(LINUX_TEMPDIR, dir)
-        return tempdir 
-
-# END Stupid python optparse hack.
+        return tempdir
