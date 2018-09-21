@@ -4,7 +4,6 @@ from __future__ import print_function
 import os
 import sys
 import stat
-from libpius.constants import BIN_PATHs, LINUX_TEMPDIR
 from os.path import abspath
 import fnmatch
 
