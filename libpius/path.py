@@ -99,7 +99,18 @@ def get_piushome(usrhome):
     if sys.platform == "win32":
         return os.path.join(usrhome, 'pius')
     else:
-        return os.path.join(usrhome, '.pius')
+        #check to see if xdg home is a user env variable
+        #set it if it is to piushome
+        if os.environ.get('XDG_CONFIG_HOME') != "":
+            piushome = os.path.join(os.environ.get('XDG_CONFIG_HOME'), '.pius')
+        #long test to see if the path exists, is able to be accessed, and if it is a dir.
+        #then join the usrhome path with ,config/.pius and return it to the program.
+        elif os.path.exists(os.path.join(usrhome, ',config')) and os.access(os.path.join(usrhome,'.config'), mode) and os.path.isdir(os.path.join(usrhome,'.config')):
+            piushome = os.path.join(usrhome,'.config/.pius')
+        #fall back if above is not applicable
+        elif:
+            piushome = os.path.join(usrhome, '.pius')
+        return piushome
 
 def get_tmpdir(dir):
     if sys.platform == "win32":
@@ -117,8 +128,16 @@ def get_tmpdir(dir):
         #hard code the path for /tmp/
         if os.environ.get('USER') == "root":
             tempdir = os.path.join(LINUX_TEMPDIR, dir)
+        #See if XDG user temp dir exists in user variables
+        #and set it as the temp dir
+        elif os.environ.get('XDG_RUNTIME_DIR') != "":
+             tempdir = os.path.join(os.environ.get('XDG_RUNTIME_DIR'), dir)
+        #Check to see if tmpdir is a valid user env variable
+        #and set it as the tempdir if it is
         elif os.environ.get('TMPDIR') != "":
             tempdir = os.path.join(os.environ.get('TMPDIR'), dir)
+        #fall back to hard coded variable for temp dir if none
+        #of the above is found or applicable
         else:
             tempdir = os.path.join(LINUX_TEMPDIR, dir)
         return tempdir
