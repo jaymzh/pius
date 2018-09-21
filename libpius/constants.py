@@ -6,10 +6,10 @@ from libpius import path
 VERSION = '2.2.6'
 HOME = path.get_home()
 GNUPGHOME = path.get_gpghome(HOME)
-DEFAULT_GPG_PATH = path.gpg_test()
+DEFAULT_GPG_PATH = path.gpg_path()
 DEFAULT_KEYRING = os.path.join(GNUPGHOME, 'pubring.gpg')
-DEFAULT_TMP_DIR = path.set_tmpdir('pius_tmp')
-DEFAULT_OUT_DIR = path.set_tmpdir('pius_out')
+DEFAULT_TMP_DIR = path.get_tmpdir('pius_tmp')
+DEFAULT_OUT_DIR = path.get_tmpdir('pius_out')
 DEFAULT_MAIL_HOST = 'localhost'
 DEFAULT_MAIL_PORT = 587
 PIUS_HOME = path.get_piushome(HOME)
