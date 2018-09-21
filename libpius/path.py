@@ -7,6 +7,9 @@ import stat
 from os.path import abspath
 import fnmatch
 
+
+LINUX_TEMP = '/tmp/'
+
 '''This is grabbed right from the python repo under lib/shutil.py'''
 
 def which(cmd, mode=os.F_OK | os.X_OK, path=None):
