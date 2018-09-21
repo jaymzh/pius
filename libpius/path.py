@@ -4,11 +4,9 @@ from __future__ import print_function
 import os
 import sys
 import stat
+from libpius.constants import BIN_PATHs, LINUX_TEMPDIR
 from os.path import abspath
 import fnmatch
-
-
-LINUX_TEMP = '/tmp/'
 
 '''This is grabbed right from the python repo under lib/shutil.py'''
 
@@ -72,10 +70,13 @@ def which(cmd, mode=os.F_OK | os.X_OK, path=None):
                     return name
     return None
 
-def gpg_test():
-    gpg = which('gpg2')
+def gpg_path():
+    if sys.platform = "win32":
+        gpg = which('gpg2')
+    elif:
+        gpg = which('gpg2',path=BIN_PATHS)
     if gpg == "":
-        print("GPG2 could not be found! Is it accessable to $PATH?")
+        print("GPG2 could not be found! Do you have the correct permissions?")
         sys.exit(1)
     else:
         return gpg
@@ -98,7 +99,7 @@ def get_piushome(usrhome):
     else:
         return os.path.join(usrhome, '.pius')
 
-def set_tmpdir(dir):
+def get_tmpdir(dir):
     if sys.platform == "win32":
         tempdir = os.environ.get('TEMP')
         return os.path.join(tempdir, dir)
