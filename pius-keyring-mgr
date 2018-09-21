@@ -35,12 +35,12 @@ DEFAULT_KEYSERVERS = [
 ]
 HOME = path.get_home()
 GNUPGHOME = path.get_gpghome(HOME)
-DEFAULT_GPG_PATH = path.gpg_test()
+DEFAULT_GPG_PATH = path.gpg_path()
 DEFAULT_CSV_DELIMITER = ','
 DEFAULT_CSV_NAME_FIELD = 2
 DEFAULT_CSV_EMAIL_FIELD = 3
 DEFAULT_CSV_FP_FIELD = 4
-DEFAULT_TMP_DIR = path.set_tmpdir('pius_keyring_mgr_tmp')
+DEFAULT_TMP_DIR = path.get_tmpdir('pius_keyring_mgr_tmp')
 
 DEFAULT_EMAIL_TEXT = '''Dear %(name)s,
 
