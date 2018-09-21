@@ -83,37 +83,37 @@ def get_home():
     else:
         return os.environ.get('HOME')
 
-def get_gpghome(HOME):
+def get_gpghome(usrhome):
     if sys.platform == "win32":
-        return os.environ.get('GNUPGHOME', os.path.join(HOME, 'roaming\/gnupg'))
+        return os.environ.get('GNUPGHOME', os.path.join(usrhome, 'roaming\/gnupg'))
     else:
-        return os.environ.get('GNUPGHOME', os.path.join(HOME, '.gnupg'))
+        return os.environ.get('GNUPGHOME', os.path.join(usrhome, '.gnupg'))
 
-def get_piushome(HOME):
+def get_piushome(usrhome):
     if sys.platform == "win32":
-        return os.path.join(HOME, 'roaming\/pius')
+        return os.path.join(usrhome, 'roaming\/pius')
     else:
-        return os.path.join(HOME, '.pius')
+        return os.path.join(usrhome, '.pius')
 
 def set_tmpdir(dir):
     if sys.platform == "win32":
-        TMP = os.environ.get('TEMP')
-        return os.path.join(TMP, dir)
+        tempdir = os.environ.get('TEMP')
+        return os.path.join(tempdir, dir)
     elif sys.platform == "darwin":
         if os.environ.get('USER') == "root":
-            TMP = '/private/tmp/'
+            tempdir = '/private/tmp/'
         else:
-            TMP = os.environ.get('TMPDIR')
-        return os.path.join(TMP, dir)
+            tempdir = os.environ.get('TMPDIR')
+        return os.path.join(tempdir, dir)
     else:
         if os.environ.get('USER') == "root":
-            return os.path.join('/tmp/', dir)
+            tempdir = os.path.join('/tmp/', dir)
         elif os.environ.get('XDG_RUNTIME_DIR') != "":
-            return os.path.join(os.environ.get('XDG_RUNTIME_DIR'), dir)
+            tempdir = os.path.join(os.environ.get('XDG_RUNTIME_DIR'), dir)
         elif os.environ.get('TMPDIR') != "":
-            return os.path.join(os.environ.get('TMPDIR'), dir)
+            tempdir = os.path.join(os.environ.get('TMPDIR'), dir)
         else:
-            TMP = '/tmp/'
-        return os.path.join(TMP, dir)
+            tempdir = os.path.join(LINUX_TEMP, dir)
+        return tempdir 
 
 # END Stupid python optparse hack.
