@@ -91,13 +91,13 @@ def get_home():
 
 def get_gpghome(usrhome):
     if sys.platform == "win32":
-        return os.environ.get('GNUPGHOME', os.path.join(usrhome, 'roaming\/gnupg'))
+        return os.environ.get('GNUPGHOME', os.path.join(usrhome, 'gnupg'))
     else:
         return os.environ.get('GNUPGHOME', os.path.join(usrhome, '.gnupg'))
 
 def get_piushome(usrhome):
     if sys.platform == "win32":
-        return os.path.join(usrhome, 'roaming\/pius')
+        return os.path.join(usrhome, 'pius')
     else:
         return os.path.join(usrhome, '.pius')
 
