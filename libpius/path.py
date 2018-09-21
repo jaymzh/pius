@@ -113,13 +113,13 @@ def get_tmpdir(dir):
         return os.path.join(tempdir, dir)
     else:
         if os.environ.get('USER') == "root":
-            tempdir = os.path.join('/tmp/', dir)
+            tempdir = os.path.join(LINUX_TEMPDIR, dir)
         elif os.environ.get('XDG_RUNTIME_DIR') != "":
             tempdir = os.path.join(os.environ.get('XDG_RUNTIME_DIR'), dir)
         elif os.environ.get('TMPDIR') != "":
             tempdir = os.path.join(os.environ.get('TMPDIR'), dir)
         else:
-            tempdir = os.path.join(LINUX_TEMP, dir)
+            tempdir = os.path.join(LINUX_TEMPDIR, dir)
         return tempdir 
 
 # END Stupid python optparse hack.
