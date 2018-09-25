@@ -8,7 +8,10 @@ from os.path import abspath
 import fnmatch
 
 LINUX_TEMPDIR = '/tmp/'
-BIN_PATHS = '/usr/bin;/usr/sbin/;/bin;/sbin;/usr/local/bin;/usr/local/sbin'
+LINUX_BIN_PATHS = '/usr/bin;/usr/sbin/;/bin;/sbin'
+#binaries is located right in the /usr/local/(program)/ folders
+MAC_BIN_PATHS = '/usr/local'
+
 '''This is grabbed right from the python repo under lib/shutil.py'''
 
 def which(cmd, mode=os.F_OK | os.X_OK, path=None):
@@ -75,8 +78,12 @@ def which(cmd, mode=os.F_OK | os.X_OK, path=None):
 def gpg_path():
     if sys.platform = "win32":
         gpg = which('gpg2')
-    elif:
-        gpg = which('gpg2',path=BIN_PATHS)
+    elif sys.platform = "darwin":
+        #joining all possible paths for location of mac binaries
+        BIN_PATHS = os.path.join(MAC_BIN_PATHS, LINUX_BIN_PATHS)
+        gpg = which('gpg2', path=BIN_PATHS)
+    elif sys.platform = "linux":
+        gpg = which('gpg2', path=LINUX_BIN_PATHS)
     if gpg == "":
         print("GPG2 could not be found! Do you have the correct permissions?")
         sys.exit(1)
