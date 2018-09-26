@@ -109,7 +109,11 @@ def get_piushome(usrhome):
     else:
         #check to see if xdg home is a user env variable
         #set it if it is to piushome
-        if os.environ.get('XDG_CONFIG_HOME') != "":
+        if os.path.exists(os.path.join(usrhome, '.pius')) and os.access(os.path.join(usrhome,'.pius'), mode) and os.path.isdir(os.path.join(usrhome,'.pius')):
+            piushome = os.path.join(usrhome,'.pius')
+        elif os.path.exists(os.path.join(usrhome, '.piusrc')) and os.access(os.path.join(usrhome,'.piusrc'), mode) and os.path.isdir(os.path.join(usrhome,'.piusrc')):
+            piushome = os.path.join(usrhome,'.piusrc')
+        elif os.environ.get('XDG_CONFIG_HOME') != "":
             piushome = os.path.join(os.environ.get('XDG_CONFIG_HOME'), '.pius')
         #long test to see if the path exists, is able to be accessed, and if it is a dir.
         #then join the usrhome path with ,config/.pius and return it to the program.
