@@ -114,15 +114,27 @@ def get_piushome(usrhome):
         elif os.path.exists(os.path.join(usrhome, '.piusrc')) and os.access(os.path.join(usrhome,'.piusrc'), mode) and os.path.isdir(os.path.join(usrhome,'.piusrc')):
             piushome = os.path.join(usrhome,'.piusrc')
         elif os.environ.get('XDG_CONFIG_HOME') != "":
-            piushome = os.path.join(os.environ.get('XDG_CONFIG_HOME'), '.pius')
+            piushome = os.path.join(os.environ.get('XDG_CONFIG_HOME'), 'pius')
         #long test to see if the path exists, is able to be accessed, and if it is a dir.
         #then join the usrhome path with ,config/.pius and return it to the program.
         elif os.path.exists(os.path.join(usrhome, '.config')) and os.access(os.path.join(usrhome,'.config'), mode) and os.path.isdir(os.path.join(usrhome,'.config')):
-            piushome = os.path.join(usrhome,'.config/.pius')
+            piushome = os.path.join(usrhome,'.config/pius')
         #fall back if above is not applicable
-        elif:
+        else:
             piushome = os.path.join(usrhome, '.pius')
         return piushome
+    
+def get_piusrc(path):
+    if sys.platform == "win32":
+        if os.path.islink(path) and not os.path.isfile(path):
+            return os.path.join(path, 'piusrc')
+        elif os.path.isfile(path) and not os.path.islink(path):
+            return path
+    else:
+        if os.path.islink(path) and not os.path.isfile(path):
+            return os.path.join(path, 'piusrc')
+        elif os.path.isfile(path) and not os.path.islink(path):
+            return path
 
 def get_tmpdir(dir):
     if sys.platform == "win32":
