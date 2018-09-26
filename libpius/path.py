@@ -76,13 +76,13 @@ def which(cmd, mode=os.F_OK | os.X_OK, path=None):
 #end of "Which" function
 
 def gpg_path():
-    if sys.platform = "win32":
+    if sys.platform == "win32":
         gpg = which('gpg2')
-    elif sys.platform = "darwin":
+    elif sys.platform == "darwin":
         #joining all possible paths for location of mac binaries
-        BIN_PATHS = os.path.join(MAC_BIN_PATHS, LINUX_BIN_PATHS)
+        BIN_PATHS = MAC_BIN_PATHS+";"+LINUX_BIN_PATHS)
         gpg = which('gpg2', path=BIN_PATHS)
-    elif sys.platform = "linux":
+    elif sys.platform == "linux":
         gpg = which('gpg2', path=LINUX_BIN_PATHS)
     if gpg == "":
         print("GPG2 could not be found! Do you have the correct permissions?")
@@ -103,6 +103,7 @@ def get_gpghome(usrhome):
         return os.environ.get('GNUPGHOME', os.path.join(usrhome, '.gnupg'))
 
 def get_piushome(usrhome):
+    mode=os.F_OK | os.X_OK
     if sys.platform == "win32":
         return os.path.join(usrhome, 'pius')
     else:
@@ -112,7 +113,7 @@ def get_piushome(usrhome):
             piushome = os.path.join(os.environ.get('XDG_CONFIG_HOME'), '.pius')
         #long test to see if the path exists, is able to be accessed, and if it is a dir.
         #then join the usrhome path with ,config/.pius and return it to the program.
-        elif os.path.exists(os.path.join(usrhome, ',config')) and os.access(os.path.join(usrhome,'.config'), mode) and os.path.isdir(os.path.join(usrhome,'.config')):
+        elif os.path.exists(os.path.join(usrhome, '.config')) and os.access(os.path.join(usrhome,'.config'), mode) and os.path.isdir(os.path.join(usrhome,'.config')):
             piushome = os.path.join(usrhome,'.config/.pius')
         #fall back if above is not applicable
         elif:
