@@ -8,7 +8,7 @@ from os.path import abspath
 import fnmatch
 
 LINUX_TEMPDIR = '/tmp/'
-LINUX_BIN_PATHS = '/usr/bin;/usr/sbin/;/bin;/sbin'
+LINUX_BIN_PATHS = '/usr/bin:/usr/sbin/:/bin:/sbin'
 #binaries is located right in the /usr/local/(program)/ folders
 MAC_BIN_PATHS = '/usr/local'
 
@@ -80,7 +80,7 @@ def gpg_path():
         gpg = which('gpg2')
     elif sys.platform == "darwin":
         #joining all possible paths for location of mac binaries
-        BIN_PATHS = MAC_BIN_PATHS+";"+LINUX_BIN_PATHS)
+        BIN_PATHS = MAC_BIN_PATHS+":"+LINUX_BIN_PATHS)
         gpg = which('gpg2', path=BIN_PATHS)
     elif sys.platform == "linux":
         gpg = which('gpg2', path=LINUX_BIN_PATHS)
