@@ -13,7 +13,7 @@ DEFAULT_OUT_DIR = path.get_tmpdir('pius_out')
 DEFAULT_MAIL_HOST = 'localhost'
 DEFAULT_MAIL_PORT = 587
 PIUS_HOME = path.get_piushome(HOME)
-PIUS_RC = os.path.join(PIUS_HOME, 'piusrc')
+PIUS_RC = path.get_piusrc(HOME)
 
 # Note the line with the email address on it below is intentionally
 # shorter than the rest to give it space to grow and still be < 80.
