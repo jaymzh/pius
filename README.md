@@ -91,11 +91,11 @@ you can simply include "%(keyid)s" (without the quotes) to get the keyid.
 
 PIUS's default config assumes there is a local mail delivery agent (MDA)
 available on port 587. If this is not the case for you, you'll want to specify
-your mail server's information using `-H` for smtp host, `-p` for port, and `-u`
+your mail server's information using `-H` for smtp host, `-P` for port, and `-u`
 for username. For example, for GMail you might use:
 
 ```
--H smtp.gmail.com -p 587 -u <your_email@gmail.com>
+-H smtp.gmail.com -P 587 -u <your_email@gmail.com>
 ```
 
 I recommend you add these settings to your config file so you don't have to type
