@@ -25,6 +25,7 @@ VALID_OPTIONS = [
     '--interactive',
     '--all-keys',
     '--gpg-agent',
+    '--gpg-path',
     '--encrypt-outfiles',
     '--debug',
     '--no-sort-keyring',
@@ -36,6 +37,13 @@ VALID_OPTIONS = [
     '--tmp-dir',
     '--policy-url',
     '--verbose',
+]
+EXPAND_USER_OPTIONS = [
+    '--gpg-path',
+    '--keyring',
+    '--mail-text',
+    '--out-dir',
+    '--tmp-dir',
 ]
 
 def debug(line):
@@ -84,6 +92,8 @@ def parse_dotfile(parser):
       parts = sep.split(line.strip())
       if not parts[0].startswith('--'):
         parts[0] = '--%s' % parts[0]
+      if parts[0] in EXPAND_USER_OPTIONS and len(parts) > 1:
+        parts[1] = os.path.expanduser(parts[1])
       if parser.has_option(parts[0]):
         opts.extend(parts)
       elif not parts[0] in VALID_OPTIONS:
