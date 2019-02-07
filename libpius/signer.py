@@ -133,11 +133,11 @@ class PiusSigner(object):
 
   def _outfile_path(self, ofile):
     '''Internal function to take a filename and put it in self.outdir.'''
-    return '%s/%s' % (self.outdir, ofile)
+    return '%s/%s' % (self.outdir, ofile.replace('/', '_'))
 
   def _tmpfile_path(self, tfile):
     '''Internal function to take a filename and put it in self.tmpdir.'''
-    return '%s/%s' % (self.tmpdir, tfile)
+    return '%s/%s' % (self.tmpdir, tfile.replace('/', '_'))
 
   def cleanup(self):
     '''Cleanup all our temp files.'''
