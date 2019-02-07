@@ -373,7 +373,7 @@ Subject: %(party)sPGP Keysignign Party: Can't find your key!''' % interp
     return shutil.copy(self.keyring, '%s-pius-backup' % self.keyring)
 
   # stolen from pius
-  def get_all_keyids(self):
+  def get_all_keyids(self, sort_keyring):
     '''Given a keyring, get all the KeyIDs from it.'''
     util.debug('extracting all keyids from keyring')
     extra_opts = self.QUIET_OPTS + self.AUTO_OPTS + ['--fixed-list-mode']
@@ -398,8 +398,9 @@ Subject: %(party)sPGP Keysignign Party: Can't find your key!''' % interp
         name = keyid = None
 
     # sort the list
-    keyids = [i[1] for i in sorted(key_tuples)]
-    return keyids
+    if sort_keyring:
+        return [i[1] for i in sorted(key_tuples)]
+    return [i[1] for i in key_tuples]
 
   def export_keyring(self):
     '''
@@ -420,9 +421,9 @@ Subject: %(party)sPGP Keysignign Party: Can't find your key!''' % interp
     # And GPG's backup
     os.remove(self.keyring + '~')
 
-  def prune(self):
+  def prune(self, sort_keyring):
     self._backup_keyring()
-    keyids = self.get_all_keyids()
+    keyids = self.get_all_keyids(sort_keyring)
 
     basecmd = self.basecmd + ['--fingerprint']
     basedelcmd = self.basecmd + self.QUIET_OPTS + self.AUTO_OPTS + [
@@ -588,6 +589,9 @@ This is useful for trimming a keyring of people who didn't show after a party
 before distributing they keyring.
 There are no options'''
   prune = optparse.OptionGroup(parser, prune_intro)
+  prune.add_option('-S', '--no-sort-keyring', dest='sort_keyring',
+                    action='store_false',
+                    help='Do not sort the keyring by name.')
   parser.add_option_group(prune)
 
   raw_intro = '''
@@ -623,7 +627,7 @@ There are no options'''
                       options.tmp_dir)
 
   if mode == 'prune':
-    kb.prune()
+    kb.prune(options.sort_keyring)
   elif mode == 'raw':
     kb.raw(args)
   elif mode == 'build':
