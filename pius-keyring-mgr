@@ -405,7 +405,7 @@ Subject: %(party)sPGP Keysignign Party: Can't find your key!''' % interp
     '''
     If we created a new keyring, it may not be in a suitable format for sharing.
     So we go ahead and export it to the real filename which will force a
-    sahreable format. Once it exists, we'll continue to use it.
+    shareable format. Once it exists, we'll continue to use it.
     '''
     if self.exported_keyring is None:
       return
@@ -452,8 +452,6 @@ Subject: %(party)sPGP Keysignign Party: Can't find your key!''' % interp
     cmd = self.basecmd + args
     util.logcmd(cmd)
     ret = subprocess.call(cmd, shell=False)
-    sys.exit(ret)
-   
 # END class KeyringBuilder
 
 
