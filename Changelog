@@ -1,3 +1,23 @@
+2.2.7
+Released 2/9/19
+phil@ipom.com
+- [pius] Update docs on sending email functionality
+- [pius-keyring-mgr] Add support for parsing flat files (closes #113)
+- [pius-keyring-mgr] Add --no-sort-keyring option for `prune` mode (closes #112)
+- [pius-keyring-mgr] Raw mode should create a keyring if necessary
+- [pius] Fix crash when key comments have slashes in them
+- [pius-report] Fix formatting in email
+- [pius-report] Support for storing that someone else won't sign us
+- [pius-keyring-mgr] Always provide keyring format instead of keybox (closes #80)
+mdujava@gmail.com
+- [pius] Fix README docs for `-P`
+cbrownstein@liquidityllc.com
+- [pius] Add option to use full display name in outbound email headers
+- [pius] Fix README typos
+nert.pinx+github@gmail.com
+- Fix man page for `-P`
+- Fix crash on new ENCRYPTION_COMPLIANCE_MODE (closes #95)
+
 2.2.6
 Released: 3/18/18
 phil@ipom.com
