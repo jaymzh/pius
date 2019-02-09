@@ -616,7 +616,7 @@ could not be found. For completness sake, it can also import keys from a file.
 The "prune" mode asks about each key on a keyring and removes one you specify.
 This is useful for trimming a keyring of people who didn't show after a party
 before distributing they keyring.
-There are no options'''
+  Options for 'prune' mode'''
   prune = optparse.OptionGroup(parser, prune_intro)
   prune.add_option('-S', '--no-sort-keyring', dest='sort_keyring',
                     action='store_false',
