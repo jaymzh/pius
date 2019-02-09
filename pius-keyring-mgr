@@ -83,97 +83,124 @@ def keyid_from_fp(fp):
   '''Given a fingerprint without whitespace, returns keyid.'''
   return fp[24:40]
 
+class PiusParser(object):
+  ACCEPTABLE_WHITESPACE = r'[ \t\n]'
 
-def parse_csv(filename, sep, name_field, email_field, fp_field, ignore_emails,
-              ignore_fps):
-  '''Parse a CSV for name, email, fingerprint, and generate keyid.'''
-  fp_field = fp_field - 1
-  name_field = name_field - 1
-  email_field = email_field - 1
-
-  ignore_email_list = LIST_SEP_RE.split(ignore_emails)
-  ignore_fp_list = LIST_SEP_RE.split(ignore_fps)
-  report = open(filename, 'r')
-  keys = []
-  for line in report:
-    line = line.strip()
-    # skip empty lines
-    if not line:
-      continue
-    parts = line.split(sep)
-    if BADKEYS_RE.search(parts[fp_field]):
-      continue
-    fp = parts[fp_field].replace(' ', '')
-    if (parts[fp_field] in ignore_fp_list
-        or parts[email_field] in ignore_email_list):
-      util.debug('Ignoring "%s" at user request' % line)
-      continue
-    keyid = keyid_from_fp(fp)
-    keys.append({'name': parts[name_field],
-                 'email': parts[email_field],
-                 'keyid': keyid,
-                 'fingerprint': fp})
-  return keys
-
-
-def parse_mbox(filename):
-  '''Parse an mbox for name, email, fingerprints and keys.
-
-  Note that in the even of a fingerprint, keyid is generated, otherwise
-  just the ASCII-armored key is stored.'''
-  box = mailbox.mbox(filename)
-  key_re = re.compile(r'(-----BEGIN PGP PUBLIC KEY BLOCK-----\n.*-----END PGP'
+  # Match whole key blcoks
+  KEY_RE = re.compile(r'(-----BEGIN PGP PUBLIC KEY BLOCK-----\n.*-----END PGP'
                       ' PUBLIC KEY BLOCK-----)', re.DOTALL)
-  fp_re = re.compile(r'((?:[\dA-Fa-f]{4}[ \t\n]*){10})')
-  uid_re = re.compile(r'(.*) <(.*)>$')
-  fixname1_re = re.compile(r'^[\'"]')
-  fixname2_re = re.compile(r'[\'"]$')
-  # make sure the re here is the same used for space in fp_re above
-  fixrp_re = re.compile(r'[ \t\n]+')
-  keys = []
-  num_fps = num_keys = 0
-  for msg in box:
-    m = email.parser.Parser()
-    p = m.parsestr(msg.as_string())
-    uid = p.get('From')
-    name = None
-    mail = None
-    match = uid_re.search(uid)
-    if match:
-      name = match.group(1)
-      mail = match.group(2)
-      name = fixname1_re.sub('', name)
-      name = fixname2_re.sub('', name)
-    for part in msg.walk():
-      # if decoded returns None, we're in multipart messages, or other
-      # non-convertable-to-text data, so we can move on. If it's multipart
-      # then we'll get to the sub-parts on further iterations of walk()
-      decoded = part.get_payload(None, True)
-      if not decoded:
-        util.debug('Skipping non-decodable part')
+  # Match fill fingerprints
+  FP_RE = re.compile(r'((?:[\dA-Fa-f]{4}' + ACCEPTABLE_WHITESPACE + r'*){10})')
+  # Match uids in the form of `name <email>`
+  UID_RE = re.compile(r'(.*) <(.*)>$')
+
+  # Fix up RE: removing leading quotes
+  FIXNAME1_RE = re.compile(r'^[\'"]')
+  # Fix up RE: removing trailing quotes
+  FIXNAME2_RE = re.compile(r'[\'"]$')
+  # Fix up RE: Squash whitespace in FPs.
+  FIXFP_RE = re.compile(ACCEPTABLE_WHITESPACE + r'+')
+
+  @classmethod
+  def parse_csv(self, filename, sep, name_field, email_field, fp_field,
+                ignore_emails, ignore_fps):
+    '''Parse a CSV for name, email, fingerprint, and generate keyid.'''
+    fp_field = fp_field - 1
+    name_field = name_field - 1
+    email_field = email_field - 1
+
+    ignore_email_list = LIST_SEP_RE.split(ignore_emails)
+    ignore_fp_list = LIST_SEP_RE.split(ignore_fps)
+    report = open(filename, 'r')
+    keys = []
+    for line in report:
+      line = line.strip()
+      # skip empty lines
+      if not line:
         continue
-      data = {'name': name, 'email': mail}
-      matches = key_re.findall(decoded)
-      if matches:
-        for match in matches:
-          num_keys = num_keys + 1
-          tmp = data.copy()
-          tmp['key'] = match
-          keys.append(tmp)
+      parts = line.split(sep)
+      if BADKEYS_RE.search(parts[fp_field]):
         continue
-      matches = fp_re.findall(decoded)
-      if matches:
-        for match in matches:
-          num_fps = num_fps + 1
-          fp = fixrp_re.sub('', match)
-          keyid = keyid_from_fp(fp)
-          tmp = data.copy()
-          tmp.update({'fingerprint': fp, 'keyid': keyid})
-          keys.append(tmp)
-          fp = 'wonk'
-  print("Found %s keys in mbox: %s fingerprints and %s full keys" %
-         (len(keys), num_fps, num_keys))
-  return keys
+      fp = parts[fp_field].replace(' ', '')
+      if (parts[fp_field] in ignore_fp_list
+          or parts[email_field] in ignore_email_list):
+        util.debug('Ignoring "%s" at user request' % line)
+        continue
+      keyid = keyid_from_fp(fp)
+      keys.append({'name': parts[name_field],
+                   'email': parts[email_field],
+                   'keyid': keyid,
+                   'fingerprint': fp})
+    print("Found %s keys in file." % len(keys))
+    return keys
+
+  @classmethod
+  def parse_flatfile(self, filename):
+    with open(filename, 'r') as fd:
+      contents = fd.read()
+    matches = self.FP_RE.findall(contents)
+    keys = []
+    for match in matches:
+      flatfp = self.FIXFP_RE.sub('', match)
+      keyid = flatfp[-8:]
+      keys.append(
+          {'keyid': keyid, 'fingerprint': flatfp, 'name': None,
+            'email': None}
+      )
+    print("Found %s keys in file." % len(keys))
+    return keys
+
+  @classmethod
+  def parse_mbox(self, filename):
+    '''Parse an mbox for name, email, fingerprints and keys.
+
+    Note that in the even of a fingerprint, keyid is generated, otherwise
+    just the ASCII-armored key is stored.'''
+    box = mailbox.mbox(filename)
+    keys = []
+    num_fps = num_keys = 0
+    for msg in box:
+      m = email.parser.Parser()
+      p = m.parsestr(msg.as_string())
+      uid = p.get('From')
+      name = None
+      mail = None
+      match = self.UID_RE.search(uid)
+      if match:
+        name = match.group(1)
+        mail = match.group(2)
+        name = self.FIXNAME1_RE.sub('', name)
+        name = self.FIXNAME2_RE.sub('', name)
+      for part in msg.walk():
+        # if decoded returns None, we're in multipart messages, or other
+        # non-convertable-to-text data, so we can move on. If it's multipart
+        # then we'll get to the sub-parts on further iterations of walk()
+        decoded = part.get_payload(None, True)
+        if not decoded:
+          util.debug('Skipping non-decodable part')
+          continue
+        data = {'name': name, 'email': mail}
+        matches = self.KEY_RE.findall(decoded)
+        if matches:
+          for match in matches:
+            num_keys = num_keys + 1
+            tmp = data.copy()
+            tmp['key'] = match
+            keys.append(tmp)
+          continue
+        matches = self.FP_RE.findall(decoded)
+        if matches:
+          for match in matches:
+            num_fps = num_fps + 1
+            fp = self.FIXFP_RE.sub('', match)
+            keyid = keyid_from_fp(fp)
+            tmp = data.copy()
+            tmp.update({'fingerprint': fp, 'keyid': keyid})
+            keys.append(tmp)
+            fp = 'wonk'
+    print("Found %s keys in mbox: %s fingerprints and %s full keys" %
+           (len(keys), num_fps, num_keys))
+    return keys
 
 
 class KeyringBuilder(object):
@@ -235,7 +262,7 @@ class KeyringBuilder(object):
     for line in gpg.stdout:
       parts = line.strip().split(' ')
       if parts[1] == 'IMPORTED':
-          print('Importing %s (%s)' % (parts[2][8:16], ' '.join(parts[3:])))
+        print('Importing %s (%s)' % (parts[2][8:16], ' '.join(parts[3:])))
 
     gpg.wait()
     retval = gpg.returncode
@@ -472,7 +499,7 @@ def check_options(parser, mode, options):
     parser.error('Must specify a keyring')
 
   if mode == 'build':
-    if not options.csv_file and not options.mbox_file:
+    if not options.csv_file and not options.mbox_file and not options.flat_file:
       parser.error('Build mode needs one of --csv-file or --mbox-file')
 
   if os.path.exists(options.tmp_dir) and not os.path.isdir(options.tmp_dir):
@@ -544,6 +571,8 @@ could not be found. For completness sake, it can also import keys from a file.
                    type='int',
                    help='Only meaningful with -c. The field number of the CSV'
                         ' where the email is. [default: %default]')
+  build.add_option('-f', '--flat-file', dest="flat_file", metavar="FILE",
+                   help='Parse flat file FILE for fingerprints.')
   build.add_option('-F', '--fp-field', dest='fp_field', metavar='FIELD',
                    type='int',
                    help='Only meaningful with -c. The field number of the CSV'
@@ -633,13 +662,16 @@ There are no options'''
   elif mode == 'build':
     keys = []
     if options.mbox_file:
-      keys = parse_mbox(options.mbox_file)
+      keys = PiusParser.parse_mbox(options.mbox_file)
 
     if options.csv_file:
-      keys.extend(parse_csv(options.csv_file, options.delimiter,
+      keys.extend(PiusParser.parse_csv(options.csv_file, options.delimiter,
                             options.name_field, options.email_field,
                             options.fp_field, options.ignore_emails,
                             options.ignore_fps))
+
+    if options.flat_file:
+      keys.extend(PiusParser.parse_flatfile(options.flat_file))
 
     if not keys:
       print("No keys IDs extract from CSV/mbox")
