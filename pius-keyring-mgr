@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2
 '''A utility to create and manage party keyrings.'''
 
 # vim:tw=80:ai:tabstop=2:expandtab:shiftwidth=2
