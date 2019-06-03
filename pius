@@ -158,6 +158,10 @@ def main():
                          ' into the default keyring. Ignored if -r is not'
                          ' specified, or if it\'s the same as the default'
                          ' keyring.')
+  parser.add_option('-L', '--save-to-mail-dir', dest='local_mail_dir',
+                    metavar='DIRECTORY',
+                    help='Instead of calling SMTP, save'
+                         ' the email to this directory.')
   parser.add_option('-m', '--mail', dest='mail', metavar='EMAIL', nargs=1,
                     type='email',
                     help='Email the encrypted, signed keys to the'
@@ -243,7 +247,8 @@ def main():
         options.mail_no_pgp_mime,
         options.mail_override,
         options.mail_text,
-        options.tmp_dir
+        options.tmp_dir,
+        options.local_mail_dir
     )
   else:
     mailer = None
