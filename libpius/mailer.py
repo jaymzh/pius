@@ -4,16 +4,15 @@ import os
 import smtplib
 import socket
 
-from email import message, quoprimime
+from email import message
 from email.utils import formatdate
 
-from six.moves import (
-  email_mime_multipart, email_mime_text, email_mime_base,
-)
+from email import mime
+from email.mime import multipart
 
 from libpius.constants import (
-  DEFAULT_MAIL_HOST, DEFAULT_MAIL_PORT, DEFAULT_MIME_EMAIL_TEXT,
-  DEFAULT_NON_MIME_EMAIL_TEXT,
+    DEFAULT_MAIL_HOST, DEFAULT_MAIL_PORT, DEFAULT_MIME_EMAIL_TEXT,
+    DEFAULT_NON_MIME_EMAIL_TEXT,
 )
 from libpius.exceptions import EncryptionKeyError, MailSendError
 from libpius.util import clean_files, debug
@@ -123,28 +122,26 @@ class PiusMailer(object):
 
     The message headers MUST be added by the caller.'''
 
-    msg = email_mime_multipart.MIMEMultipart(
+    msg = multipart.MIMEMultipart(
         'encrypted', micalg="pgp-sha1", protocol="application/pgp-encrypted"
     )
     msg.preamble = 'This is an OpenPGP/MIME signed message (RFC 2440 and 3156)'
 
     # The signed part of the message. This is a MIME encapsulation
     # of the main body of the message *and* the key.
-    encrypted_body = email_mime_multipart.MIMEMultipart('mixed')
+    encrypted_body = multipart.MIMEMultipart('mixed')
 
     # First part of signed body
-    textpart = email_mime_base.MIMEBase('text', 'plain', charset="ISO-8859-1")
+    textpart = mime.base.MIMEBase('text', 'plain', charset="ISO-8859-1")
     textpart.add_header('Content-Transfer-Encoding', 'quoted-printable')
     textpart.__delitem__('MIME-Version')
-    textpart.set_payload(quoprimime.encode(
-        self._get_email_body(signer, keyid, email)
-    ))
+    textpart.set_payload(self._get_email_body(signer, keyid, email))
     encrypted_body.attach(textpart)
 
     # The second part of the signed body
     file_base = os.path.basename(filename)
-    attached_sig = email_mime_base.MIMEBase('application', 'pgp-keys',
-                                     name='%s' % file_base)
+    attached_sig = mime.base.MIMEBase('application', 'pgp-keys',
+                                      name='%s' % file_base)
     attached_sig.add_header('Content-Disposition', 'inline',
                             filename='%s' % file_base)
     attached_sig.__delitem__('MIME-Version')
@@ -184,14 +181,14 @@ class PiusMailer(object):
       raise EncryptionKeyError
 
     # Create the version part of the PGP/Mime encryption
-    pgp_ver = email_mime_base.MIMEBase('application', 'pgp-encrypted')
+    pgp_ver = mime.base.MIMEBase('application', 'pgp-encrypted')
     pgp_ver.add_header('Content-Description', 'PGP/MIME version identification')
     pgp_ver.__delitem__('MIME-Version')
     pgp_ver.set_payload('Version: 1\n')
 
     # Create the big sign-encrypted body part
-    pgp_data = email_mime_base.MIMEBase('application', 'octet-stream',
-                                 name='encrypted.asc')
+    pgp_data = mime.base.MIMEBase('application', 'octet-stream',
+                                  name='encrypted.asc')
     pgp_data.add_header('Content-Description', 'OpenPGP encrypted message')
     pgp_data.add_header('Content-Disposition', 'inline',
                         filename='encrypted.asc')
@@ -207,13 +204,13 @@ class PiusMailer(object):
 
   def _generate_non_pgp_mime_email(self, signer, email, keyid, filename):
     '''Send the encrypted uid off to the user.'''
-    msg = email_mime_multipart()
+    msg = multipart()
     msg.epilogue = ''
 
-    part = email_mime_text(self._get_email_body(signer, keyid, email))
+    part = mime.text(self._get_email_body(signer, keyid, email))
     msg.attach(part)
 
-    part = email_mime_base.MIMEBase('application', 'octet-stream')
+    part = mime.base.MIMEBase('application', 'octet-stream')
     part.add_header('Content-Disposition', 'inline; filename="%s"' %
                     os.path.basename(filename))
     part.set_payload(open(filename, 'r').read())

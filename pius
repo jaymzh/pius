@@ -1,4 +1,4 @@
-#!/usr/bin/python2
+#!/usr/bin/env python3
 """A utility to sign all UIDs on a list of PGP keys and PGP/Mime encrypt-email
 them to the respective emails."""
 
@@ -18,13 +18,10 @@ them to the respective emails."""
 # TODO:
 #   - Offer ability to "pick up where we left off"
 #
-from __future__ import print_function
 
 import os
 import sys
 from optparse import OptionParser
-
-from six.moves import input
 
 from libpius import mailer as pmailer
 from libpius import signer as psigner

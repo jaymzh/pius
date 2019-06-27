@@ -9,8 +9,6 @@ import re
 import sys
 import subprocess
 
-from six.moves import input
-
 from libpius.util import debug, clean_files, logcmd
 from libpius.constants import CERT_LEVEL_INFO
 from libpius.exceptions import (
@@ -93,6 +91,7 @@ class PiusSigner(object):
         stdin=self.null,
         stdout=subprocess.PIPE,
         stderr=self.null,
+        text=True,
     )
 
     v = None
@@ -140,7 +139,8 @@ class PiusSigner(object):
         cmd,
         stdin=self.null,
         stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT
+        stderr=subprocess.STDOUT,
+        text=True,
     )
     # We use 'pub' instead of 'fpr' to support old crufty keys too...
     pub_re = re.compile('^pub:')
@@ -224,8 +224,10 @@ class PiusSigner(object):
     logcmd(cmd)
     gpg = subprocess.Popen(cmd, stdin=subprocess.PIPE,
                            stdout=subprocess.PIPE,
-                           stderr=self.null,
-                           close_fds=True)
+                           stderr=subprocess.PIPE,
+                           close_fds=True,
+                           bufsize=1,
+                           text=True)
 
     gpg.stdin.write('\n')
     uids = []
@@ -304,12 +306,13 @@ class PiusSigner(object):
       uids.append({'email': email, 'file': self._outfile_path(filename),
                    'status': status, 'id': uid, 'index': index})
 
-    debug('quitting')
     # sometimes it wants a save here. I don't know why. We can quit and check
     # for a save prompt, and then hit no, but we have to make sure it's still
     # running or we'll hang. It's just easier to issue a 'save' instead of a
-    # quit
-    gpg.stdin.write('save\n')
+    # quit. Also, write() + wait() causes a hang in py3 even though there's
+    # nothing in any of the pipes, so we use communicate() here which does
+    # the right thing
+    gpg.stdin.write("save\n")
     debug('waiting')
     gpg.wait()
 
@@ -486,10 +489,15 @@ class PiusSigner(object):
           '--edit-key', key,
       ]  # NB: keep the `--edit-key <key>` at the very end of this list!
     logcmd(cmd)
-    gpg = subprocess.Popen(cmd, stdin=subprocess.PIPE,
-                           stdout=subprocess.PIPE,
-                           stderr=self.null,
-                           close_fds=True)
+    gpg = subprocess.Popen(
+      cmd,
+      stdin=subprocess.PIPE,
+      stdout=subprocess.PIPE,
+      stderr=self.null,
+      close_fds=True,
+      text=True,
+      bufsize=1,
+    )
 
     debug('Waiting for prompt')
     self.gpg_wait_for_string(gpg.stdout, PiusSigner.GPG_PROMPT)
@@ -740,7 +748,8 @@ class PiusSigner(object):
     gpg = subprocess.Popen(cmd, stdin=subprocess.PIPE,
                            stdout=subprocess.PIPE,
                            stderr=self.null,
-                           close_fds=True)
+                           close_fds=True,
+                           text=True)
 
     # For some reason when using agent an initial enter is needed
     gpg.stdin.write('\n')

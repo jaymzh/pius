@@ -1,6 +1,4 @@
 # vim:shiftwidth=2:tabstop=2:expandtab:textwidth=80:softtabstop=2:ai:
-from __future__ import print_function
-
 import json
 import os
 import shutil

@@ -1,4 +1,4 @@
-#!/usr/bin/python2
+#!/usr/bin/env python3
 '''A utility to create and manage party keyrings.'''
 
 # vim:tw=80:ai:tabstop=2:expandtab:shiftwidth=2
@@ -10,7 +10,6 @@
 #   modify it under the terms of the GNU General Public License as
 #   published by the Free Software Foundation, version 2.
 #
-from __future__ import print_function
 
 import email
 import mailbox
@@ -21,8 +20,6 @@ import shutil
 import smtplib
 import subprocess
 import sys
-
-from six.moves import input
 
 from libpius import util
 from libpius.constants import VERSION
