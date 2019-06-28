@@ -3,6 +3,7 @@ import getpass
 import os
 import smtplib
 import socket
+import sys
 
 from email import message
 from email.utils import formatdate
@@ -32,39 +33,71 @@ class PiusMailer(object):
     self.address_override = override
     self.message_text = msg_text
     self.tmp_dir = tmp_dir
+    if user:
+      while True:
+        self.get_pass()
+        try:
+          if not self.verify_pass():
+            print('Sorry, cannot authenticate to %s as %s with that password,'
+                  ' try again.' % (self.host, self.user))
+          else:
+            break
+        except MailSendError as msg:
+          print('There was a problem talking to the mail server (%s): %s'
+                % (self.host, msg))
+          sys.exit(1)
+
+    debug(f"PiusMailer initialized with {user}@{host}:{port} (TLS: {tls})")
 
   @staticmethod
-  def add_options(parser):
+  def add_options(parser, group=None):
+    if group is None:
+        group = parser
     parser.set_defaults(mail_host=DEFAULT_MAIL_HOST,
                         mail_port=DEFAULT_MAIL_PORT,
                         mail_tls=True)
-    parser.add_option('-u', '--mail-user', dest='mail_user', metavar='USER',
+    group.add_option('-D', '--display-name', dest='display_name',
+                      metavar="NAME", type='display_name',
+                      help='Email name to display, e.g., NAME '
+                           '<example@example.com>')
+    group.add_option('-u', '--mail-user', dest='mail_user', metavar='USER',
                       type='not_another_opt', nargs=1,
                       help='Authenticate to the SMTP server, and use username'
                            ' USER. You will be prompted for the password.')
-    parser.add_option('-S', '--no-mail-tls', action='store_false',
+    group.add_option('-S', '--no-mail-tls', action='store_false',
                       dest='mail_tls',
                       help='Do not use STARTTLS when talking to the SMTP'
                            ' server.')
-    parser.add_option('-P', '--mail-port', dest='mail_port', metavar='PORT',
+    group.add_option('-P', '--mail-port', dest='mail_port', metavar='PORT',
                       nargs=1, type='int',
                       help='Port of SMTP server. [default: %default]')
-    parser.add_option('-O', '--no-pgp-mime', action='store_true',
+    group.add_option('-O', '--no-pgp-mime', action='store_true',
                       dest='mail_no_pgp_mime',
                       help='Do not use PGP/Mime when sending email.')
-    parser.add_option('-n', '--override-email', dest='mail_override',
+    group.add_option('-n', '--override-email', dest='mail_override',
                       metavar='EMAIL', nargs=1, type='email',
                       help='Rather than send to the user, send to this address.'
                            ' Mostly useful for debugging.')
-    parser.add_option('-M', '--mail-text', dest='mail_text', metavar='FILE',
+    group.add_option('-M', '--mail-text', dest='mail_text', metavar='FILE',
                       nargs=1, type='not_another_opt',
                       help='Use the text in FILE as the body of email when'
                            ' sending out emails instead of the default text.'
                            ' To see the default text use'
                            ' --print-default-email. Requires -m.')
-    parser.add_option('-H', '--mail-host', dest='mail_host', metavar='HOSTNAME',
+    group.add_option('-H', '--mail-host', dest='mail_host', metavar='HOSTNAME',
                       nargs=1, type='not_another_opt',
                       help='Hostname of SMTP server. [default: %default]')
+
+  def from_addr(self):
+    '''Accessor'''
+    return self.mail
+
+  def display_name(self):
+    '''Accessor'''
+    return self.display_name
+
+  def mail_text(self):
+    '''Accessor'''
 
   def pgp_mime(self):
     '''Accessor'''

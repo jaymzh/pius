@@ -138,9 +138,6 @@ def main():
                     help='Email the encrypted, signed keys to the'
                          ' respective email addresses. EMAIL is the address'
                          ' to send from. See also -H and -P.')
-  parser.add_option('-D', '--display-name', dest='display_name', metavar="NAME",
-                    type='display_name',
-                    help='Email name to display, e.g., NAME <example@example.com>')
   parser.add_option('-N', '--no-sort-keyring', dest='sort_keyring',
                     action='store_false',
                     help='Do not sort the keyring by name.')
@@ -173,7 +170,6 @@ def main():
   pmailer.PiusMailer.add_options(parser)
 
   # Check for extra options in the ~/.pius file
-  all_opts = []
   all_opts = util.parse_dotfile(parser)
   # Note that by putting this at the end we allow the command line to override
   # options specified in the config file, BUT if any options conflict, the first
@@ -248,20 +244,6 @@ def main():
   else:
     warn_if_short_keyids(args)
     key_list = args
-
-  if options.mail_user:
-    while True:
-      mailer.get_pass()
-      try:
-        if not mailer.verify_pass():
-          print('Sorry, cannot authenticate to %s as %s with that password,'
-                ' try again.' % (options.mail_host, options.mail_user))
-        else:
-          break
-      except MailSendError as msg:
-        print('There was a problem talking to the mail server (%s): %s'
-               % (options.mail_host, msg))
-        sys.exit(1)
 
   # The actual signing
   signed_keys = {}
