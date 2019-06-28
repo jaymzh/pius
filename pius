@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2
 """A utility to sign all UIDs on a list of PGP keys and PGP/Mime encrypt-email
 them to the respective emails."""
 
