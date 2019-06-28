@@ -163,12 +163,13 @@ class PiusParser(object):
       uid = p.get('From')
       name = None
       mail = None
-      match = self.UID_RE.search(uid)
-      if match:
-        name = match.group(1)
-        mail = match.group(2)
-        name = self.FIXNAME1_RE.sub('', name)
-        name = self.FIXNAME2_RE.sub('', name)
+      if uid:
+        match = self.UID_RE.search(uid)
+        if match:
+          name = match.group(1)
+          mail = match.group(2)
+          name = self.FIXNAME1_RE.sub('', name)
+          name = self.FIXNAME2_RE.sub('', name)
       for part in msg.walk():
         # if decoded returns None, we're in multipart messages, or other
         # non-convertable-to-text data, so we can move on. If it's multipart
@@ -177,6 +178,7 @@ class PiusParser(object):
         if not decoded:
           util.debug('Skipping non-decodable part')
           continue
+        decoded = decoded.decode('utf8')
         data = {'name': name, 'email': mail}
         matches = self.KEY_RE.findall(decoded)
         if matches:
@@ -230,6 +232,9 @@ class KeyringBuilder(object):
         # must specify this everytime you specify no-defualt-keyring
         '--no-auto-check-trustdb'
     ]
+
+  def num_not_found(self):
+    return len(self.notfound)
 
   #
   # BEGIN INTERNAL FUNCTIONS
@@ -661,7 +666,7 @@ There are no options'''
       kb.get_all_keys(keys)
       if options.verbose:
         kb.print_report()
-      if options.mail:
+      if options.mail and kb.num_not_found() > 0:
         print("Preparing to send out emails to those whose keys were not found")
         mailer = pmailer.PiusMailer(
             options.mail,
