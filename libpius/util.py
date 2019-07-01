@@ -45,6 +45,7 @@ EXPAND_USER_OPTIONS = [
     '--tmp-dir',
 ]
 
+
 def debug(line):
   '''Print a line, if debug is on, preceded with "DEBUG: ".'''
   if DEBUG_ON:
@@ -54,11 +55,13 @@ def debug(line):
 def logcmd(cmd):
   debug("Running: %s" % ' '.join(cmd))
 
+
 def clean_files(flist):
   '''Delete a list of files.'''
   for cfile in flist:
     if os.path.exists(cfile):
       os.unlink(cfile)
+
 
 def parse_dotfile(parser):
   tmp_file = PIUS_HOME + 'rc'
@@ -102,12 +105,12 @@ def parse_dotfile(parser):
 
   return opts
 
+
 #
 # Stupid fucking optparse will assume "-m -e" means "-e is the email address
 # being passed to -m"... instead of "oh, -e is an option, -m is missing its
 # required argument. This is an ugly hack around that.
 #
-
 def check_not_another_opt(_, opt, value):
   '''Ensure argument to an option isn't another option.'''
   match = re.search(r'^\-', value)
@@ -115,6 +118,7 @@ def check_not_another_opt(_, opt, value):
     raise OptionValueError('Option %s: Value %s looks like another option'
                            ' instead of the required argument' % (opt, value))
   return value
+
 
 def check_email(_, opt, value):
   '''Ensure argument seems like an email address.'''
@@ -124,6 +128,7 @@ def check_email(_, opt, value):
                            ' formed email address' % (opt, value))
   return value
 
+
 def check_display_name(_, opt, value):
   '''Ensure argument is a valid email display name.'''
   match = re.search(r'[()<>[\]:;@\\,."]', value)
@@ -132,6 +137,7 @@ def check_display_name(_, opt, value):
                            ' characters' % (opt, value))
   return value
 
+
 def check_keyid(_, opt, value):
   '''Ensure argument seems like a keyid.'''
   match = re.match(r'[0-9a-fA-Fx]', value)
@@ -139,6 +145,7 @@ def check_keyid(_, opt, value):
     raise OptionValueError('Option %s: Value %s does not appear to be a KeyID'
                            % (opt, value))
   return value
+
 
 class MyOption(Option):
   '''Our own option class.'''

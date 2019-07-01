@@ -2,11 +2,10 @@
 import json
 import os
 
-from six.moves import input
 
 # TODO: since the wotsap website is all fubar'd, I've hacked it up to read
 # /tmp/report. You can generate this with 'wotsap >/tmp/report'
-class pgp_report(object):
+class PgpReport:
   '''Class for retrieving and processing wotsap reports.'''
 
   kURL = 'http://webware.lysator.liu.se/jc/wotsap/wots/latest/keystatistics/'
@@ -92,7 +91,7 @@ class pgp_report(object):
     for keyid in copy:
       if self.keys and keyid not in self.keys:
         continue
-      if self.sign_data.has_key(keyid):
+      if keyid in self.sign_data:
         if self.sign_data[keyid] == self.kSIGNED:
           self.need_upload.append(keyid)
           self.might_need_to_sign.remove(keyid)

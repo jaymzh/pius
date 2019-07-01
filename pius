@@ -230,10 +230,6 @@ def main():
       options.mail_host
   )
 
-  if not signer.gpg2:
-    parser.error("ERROR: gpg2 or later is required!")
-    sys.exit(1)
-
   if options.all_keys:
     key_list = signer.get_all_keyids()
     if len(key_list) == 0:

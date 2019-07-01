@@ -7,8 +7,7 @@ from libpius.constants import PIUS_HOME
 from libpius import util
 
 
-class SignState(object):
-
+class SignState:
   # States for our intention/state on other keys
   kSIGNED = 'SIGNED'
   kWILL_NOT_SIGN = 'WILL_NOT_SIGN'

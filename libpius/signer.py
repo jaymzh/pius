@@ -3,21 +3,22 @@
 # vim:shiftwidth=2:tabstop=2:expandtab:textwidth=80:softtabstop=2:ai:
 from __future__ import print_function
 
-import getpass
 import os
 import re
 import sys
 import subprocess
 
 from libpius.util import debug, clean_files, logcmd
-from libpius.constants import CERT_LEVEL_INFO
+from libpius.constants import (
+  CERT_LEVEL_INFO, GPG_BASE_OPTS, GPG_QUIET_OPTS, GPG_FD_OPTS
+)
 from libpius.exceptions import (
   AgentError, EncryptionKeyError, EncryptionUnknownError, GpgUnknownError,
   MailSendError, NoSelfKeyError, PassphraseError
 )
 
 
-class PiusSigner(object):
+class PiusSigner:
   '''Main class for signing UIDs.'''
 
   TMP_KEYRING_FILE = 'pius_keyring.gpg'
@@ -67,23 +68,9 @@ class PiusSigner(object):
     self.policy_url = policy_url
     self.mail_host = mail_host
     self.null = open(os.path.devnull, 'w')
-    self.gpg_base_opts = [
-        '--use-agent',
-        '--keyid-format', 'long',
-        '--no-auto-check-trustdb',
-    ]
-    self.gpg_quiet_opts = [
-          '-q',
-          '--no-tty',
-          '--batch',
-    ]
-    self.gpg_fd_opts = [
-          '--command-fd', '0',
-          '--status-fd', '1',
-    ]
-    self.gpg2 = self._gpg2
+    self._check_gpg2()
 
-  def _gpg2(self):
+  def _check_gpg2(self):
     cmd = [self.gpg, '--version']
     logcmd(cmd)
     gpg = subprocess.Popen(
@@ -108,7 +95,9 @@ class PiusSigner(object):
       print("ERROR: Could not determine gpg version\n")
       sys.exit(1)
 
-    return v.startswith('2.')
+    if not v.startswith('2.'):
+      print("ERROR: PIUS requires GnuPG 2.x or later\n")
+      sys.exit(1)
 
   def _outfile_path(self, ofile):
     '''Internal function to take a filename and put it in self.outdir.'''
@@ -125,12 +114,10 @@ class PiusSigner(object):
   def get_all_keyids(self):
     '''Given a keyring, get all the KeyIDs from it.'''
     debug('extracting all keyids from keyring')
-    cmd = [self.gpg] + self.gpg_base_opts + [
-        '--no-default-keyring',
+    cmd = [self.gpg] + GPG_BASE_OPTS + [
         '--keyring', self.keyring,
         '--no-options',
         '--with-colons',
-        '--keyid-format', 'long',
         '--fingerprint',
         '--fixed-list-mode',
     ]
@@ -170,17 +157,19 @@ class PiusSigner(object):
 
   def check_fingerprint(self, key):
     '''Prompt the user to see if they have verified this fingerprint.'''
-    cmd = [self.gpg] + self.gpg_base_opts + self.gpg_quiet_opts + [
-        '--no-default-keyring',
+    cmd = [self.gpg] + GPG_BASE_OPTS + GPG_QUIET_OPTS + [
         '--keyring', self.keyring,
         '--fingerprint', key,
     ]
     logcmd(cmd)
-    gpg = subprocess.Popen(cmd,
-                           stdin=self.null,
-                           stdout=subprocess.PIPE,
-                           stderr=self.null,
-                           close_fds=True)
+    gpg = subprocess.Popen(
+      cmd,
+      stdin=self.null,
+      stdout=subprocess.PIPE,
+      stderr=self.null,
+      close_fds=True,
+      text=True,
+    )
     output = gpg.stdout.read()
     output = output.strip()
     retval = gpg.wait()
@@ -213,9 +202,8 @@ class PiusSigner(object):
 
   def get_uids(self, key):
     '''Get all UIDs on a given key.'''
-    cmd = [self.gpg] + self.gpg_base_opts +  self.gpg_quiet_opts + \
-      self.gpg_fd_opts + [
-          '--no-default-keyring',
+    cmd = [self.gpg] + GPG_BASE_OPTS + GPG_QUIET_OPTS + \
+      GPG_FD_OPTS + [
           '--keyring', self.keyring,
           '--no-options',
           '--with-colons',
@@ -333,9 +321,8 @@ class PiusSigner(object):
     enc_path = self._outfile_path(enc_file)
     if os.path.exists(enc_path):
       os.unlink(enc_path)
-    cmd = [self.gpg] + self.gpg_base_opts + self.gpg_quiet_opts + \
-      self.gpg_fd_opts + [
-          '--no-default-keyring',
+    cmd = [self.gpg] + GPG_BASE_OPTS + GPG_QUIET_OPTS + \
+      GPG_FD_OPTS + [
           '--keyring', self.tmp_keyring,
           '--always-trust',
           '--armor',
@@ -407,8 +394,7 @@ class PiusSigner(object):
     '''Internal function used by other export_* functions.'''
     if os.path.exists(path):
       os.unlink(path)
-    cmd = [self.gpg] + self.gpg_base_opts + self.gpg_quiet_opts + [
-        '--no-default-keyring',
+    cmd = [self.gpg] + GPG_BASE_OPTS + GPG_QUIET_OPTS + [
         '--keyring', keyring,
         '--armor',
         '--output', path,
@@ -444,9 +430,8 @@ class PiusSigner(object):
       import_opts = ['import-minimal']
       if x == self.signer:
         import_opts.append('keep-ownertrust')
-      path = self._tmpfile_path('%s.asc' %  x)
-      cmd = [self.gpg] + self.gpg_base_opts + self.gpg_quiet_opts + [
-          '--no-default-keyring',
+      path = self._tmpfile_path('%s.asc' % x)
+      cmd = [self.gpg] + GPG_BASE_OPTS + GPG_QUIET_OPTS + [
           '--keyring', self.tmp_keyring,
           '--import-options', ','.join(import_opts),
           '--import', path,
@@ -458,7 +443,6 @@ class PiusSigner(object):
             print("\n\nERROR: Didn't find the signing key on keyring")
             sys.exit(1)
         raise e
-
 
   def policy_opts(self):
     if self.policy_url:
@@ -479,9 +463,9 @@ class PiusSigner(object):
 
   def sign_uid(self, key, index, level):
     '''Sign a single UID of a key.'''
-    keyring = ['--no-default-keyring', '--keyring', self.tmp_keyring]
-    cmd = [self.gpg] + self.gpg_base_opts + self.gpg_quiet_opts + \
-      self.gpg_fd_opts + keyring + [
+    cmd = [self.gpg] + GPG_BASE_OPTS + GPG_QUIET_OPTS + \
+      GPG_FD_OPTS + [
+          '--keyring', self.tmp_keyring,
           '-u', self.force_signer,
       ] + self.policy_opts() + [
           '--default-cert-level', level,
@@ -591,14 +575,9 @@ class PiusSigner(object):
       if 'GOOD_PASSPHRASE' in line:
         break
       if PiusSigner.GPG_PROMPT in line:
-        if self.gpg2:
-          break;
-        print('  ERROR: GPG didn\'t sign.')
-        raise GpgUnknownError(line)
+        break
 
     debug('Saving key')
-    if not self.gpg2:
-      self.gpg_wait_for_string(gpg.stdout, PiusSigner.GPG_PROMPT)
     gpg.stdin.write('save\n')
 
     gpg.wait()
@@ -685,7 +664,7 @@ class PiusSigner(object):
       # itself is encrypted
       if self.mail:
         try:
-          if uid['email'] == None:
+          if uid['email'] is None:
             print('  WARNING: No email for %s, cannot send key.' % uid['id'])
             continue
           # this is a ugly. The mailer needs to be able to be able to call
@@ -695,7 +674,7 @@ class PiusSigner(object):
           sys.stdout.write(', mailed')
         except MailSendError as msg:
           print('\nThere was a problem talking to the mail server (%s): %s'
-                 % (self.mail_host, msg))
+                % (self.mail_host, msg))
 
       # add a newline to all the sys.stdout.write()s
       print('')
@@ -720,20 +699,18 @@ class PiusSigner(object):
     print('Importing keyring...')
     # Incase we've been given a pbx format file, which is unimportable,
     # export to a file that is importable, and import that.
-    cmd = [self.gpg] + self.gpg_base_opts + self.gpg_quiet_opts + [
-        '--no-default-keyring',
+    cmd = [self.gpg] + GPG_BASE_OPTS + GPG_QUIET_OPTS + [
         '--keyring', self.keyring,
         '--export', '|', self.gpg,
-    ] + self.gpg_base_opts + self.gpg_quiet_opts + ['--import']
+    ] + GPG_BASE_OPTS + GPG_QUIET_OPTS + ['--import']
     self._run_and_check_status(' '.join(cmd), True)
 
   def encrypt_and_sign_file(self, infile, outfile, keyid):
     '''Encrypt and sign a file.
 
     Used for PGP/Mime email generation.'''
-    cmd = [self.gpg] + self.gpg_base_opts +  self.gpg_quiet_opts + \
-      self.gpg_fd_opts + [
-          '--no-default-keyring',
+    cmd = [self.gpg] + GPG_BASE_OPTS + GPG_QUIET_OPTS + \
+      GPG_FD_OPTS + [
           '--keyring', self.tmp_keyring,
           '--no-options',
           '--always-trust',

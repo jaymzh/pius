@@ -19,7 +19,7 @@ from libpius.exceptions import EncryptionKeyError, MailSendError
 from libpius.util import clean_files, debug
 
 
-class PiusMailer(object):
+class PiusMailer:
   def __init__(self, mail, display_name, host, port, user, tls, no_mime,
                override, msg_text, tmp_dir):
     self.mail = mail

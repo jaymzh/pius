@@ -15,6 +15,23 @@ DEFAULT_MAIL_PORT = 587
 PIUS_HOME = os.path.join(HOME, '.pius')
 PIUS_RC = os.path.join(PIUS_HOME, 'piusrc')
 
+GPG_BASE_OPTS = [
+    '--use-agent',
+    '--keyid-format', 'long',
+    '--no-default-keyring',
+    # must be specified anytime no-default-keyring is specified
+    '--no-auto-check-trustdb',
+]
+GPG_QUIET_OPTS = [
+    '-q',
+    '--no-tty',
+    '--batch',
+]
+GPG_FD_OPTS = [
+    '--command-fd', '0',
+    '--status-fd', '1',
+]
+
 ACCEPTABLE_WHITESPACE_RE = r'[ \t\n]'
 # Match whole key blcoks
 KEY_RE = re.compile(r'(-----BEGIN PGP PUBLIC KEY BLOCK-----\n.*-----END PGP'

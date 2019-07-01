@@ -22,7 +22,9 @@ import sys
 
 from libpius import util
 from libpius import mailer as pmailer
-from libpius.constants import VERSION
+from libpius.constants import (
+    VERSION, GPG_BASE_OPTS, GPG_QUIET_OPTS, GPG_FD_OPTS
+)
 
 BADKEYS_RE = re.compile(r'00000000|12345678|no pgp key')
 LIST_SEP_RE = re.compile(r'\s*,\s*')
@@ -81,7 +83,8 @@ def keyid_from_fp(fp):
   '''Given a fingerprint without whitespace, returns keyid.'''
   return fp[24:40]
 
-class PiusParser(object):
+
+class PiusParser:
   @classmethod
   def parse_csv(self, filename, sep, name_field, email_field, fp_field,
                 ignore_emails, ignore_fps):
@@ -186,11 +189,10 @@ class PiusParser(object):
     return keys
 
 
-class KeyringBuilder(object):
+class KeyringBuilder:
   '''A class for building and managing keyrings.'''
 
-  QUIET_OPTS = ['-q', '--no-tty', '--batch']
-  AUTO_OPTS = [
+  AUTO_OPTS = GPG_FD_OPTS + [
       '--command-fd',  '0', '--status-fd', '1', '--no-options', '--with-colons'
   ]
 
@@ -208,13 +210,7 @@ class KeyringBuilder(object):
     self.keyservers = keyservers
     self.tmp_dir = tmp_dir
     self.party = ''
-    self.basecmd = [
-        self.gpg,
-        '--keyring', self.keyring,
-        '--no-default-keyring',
-        # must specify this everytime you specify no-defualt-keyring
-        '--no-auto-check-trustdb'
-    ]
+    self.basecmd = [self.gpg] + GPG_BASE_OPTS + ['--keyring', self.keyring]
 
   def num_not_found(self):
     return len(self.notfound)
@@ -238,7 +234,7 @@ class KeyringBuilder(object):
 
   def _import_key_file(self, kfile):
     '''Given a keyfile, import it into our keyring.'''
-    extra_opts = self.QUIET_OPTS + self.AUTO_OPTS
+    extra_opts = GPG_QUIET_OPTS + self.AUTO_OPTS
     cmd = self.basecmd + extra_opts + ['--import', kfile]
     util.logcmd(cmd)
     gpg = subprocess.Popen(cmd, shell=False, stdin=None, close_fds=True,
@@ -298,7 +294,7 @@ class KeyringBuilder(object):
   # BEGIN PUBLIC FUNCTIONS
   #
   def have_key(self, key):
-    cmd = self.basecmd + self.QUIET_OPTS + ['--fingerprint', key]
+    cmd = self.basecmd + GPG_QUIET_OPTS + ['--fingerprint', key]
     gpg = subprocess.Popen(cmd, shell=False, stdin=None, close_fds=True,
                            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     gpg.wait()
@@ -310,7 +306,7 @@ class KeyringBuilder(object):
 
   def get_key(self, key):
     '''Try to get key from any keyservers we know about.'''
-    basecmd = self.basecmd + self.QUIET_OPTS + [
+    basecmd = self.basecmd + GPG_QUIET_OPTS + [
         '--keyserver-options', 'timeout=2',
     ]
 
@@ -376,7 +372,7 @@ class KeyringBuilder(object):
   def get_all_keyids(self, sort_keyring):
     '''Given a keyring, get all the KeyIDs from it.'''
     util.debug('extracting all keyids from keyring')
-    extra_opts = self.QUIET_OPTS + self.AUTO_OPTS + ['--fixed-list-mode']
+    extra_opts = GPG_QUIET_OPTS + self.AUTO_OPTS + ['--fixed-list-mode']
     cmd = self.basecmd + extra_opts + ['--fingerprint']
     util.logcmd(cmd)
     gpg = subprocess.Popen(cmd, shell=False, stdout=subprocess.PIPE,
@@ -409,8 +405,9 @@ class KeyringBuilder(object):
     shareable format. Once it exists, we'll continue to use it.
     '''
     if self.exported_keyring is None:
+      debug("Not exporting keyring, exported_keyring is None")
       return
-    cmd = self.basecmd + self.QUIET_OPTS + [
+    cmd = self.basecmd + GPG_QUIET_OPTS + [
       '--export',
       '--output', self.exported_keyring
     ]
@@ -419,14 +416,16 @@ class KeyringBuilder(object):
     # Remove the temp file
     os.remove(self.keyring)
     # And GPG's backup
-    os.remove(self.keyring + '~')
+    backup = self.keyring + '~'
+    if os.path.exists(backup):
+      os.remove(backup)
 
   def prune(self, sort_keyring):
     self._backup_keyring()
     keyids = self.get_all_keyids(sort_keyring)
 
     basecmd = self.basecmd + ['--fingerprint']
-    basedelcmd = self.basecmd + self.QUIET_OPTS + self.AUTO_OPTS + [
+    basedelcmd = self.basecmd + GPG_QUIET_OPTS + self.AUTO_OPTS + [
         '--yes', '--delete-key'
     ]
     for fp in keyids:

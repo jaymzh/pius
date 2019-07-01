@@ -5,7 +5,6 @@
 # Copyright (c) 2010-present Phil Dibowitz <phil@ipom.com>
 
 '''Determine why signatures from/to a key are not cross-signatures.'''
-from __future__ import print_function
 
 import os
 import re
@@ -23,7 +22,7 @@ from libpius.state import SignState
 __author__ = 'Phil Dibowitz <phil@ipom.com>'
 
 
-class PiusReporter(object):
+class PiusReporter:
   # states a key can be in
   kSIGNED_AND_UPLOADED = 'SIGNED_AND_NOT_UPLOADED'
   kSIGNED_BUT_NOT_UPLOADED = 'SIGNED_BUT_NOT_UPLOADED'
@@ -521,4 +520,3 @@ def main():
 
 if __name__ == '__main__':
   main()
-
