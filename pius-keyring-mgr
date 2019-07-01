@@ -82,23 +82,6 @@ def keyid_from_fp(fp):
   return fp[24:40]
 
 class PiusParser(object):
-  ACCEPTABLE_WHITESPACE = r'[ \t\n]'
-
-  # Match whole key blcoks
-  KEY_RE = re.compile(r'(-----BEGIN PGP PUBLIC KEY BLOCK-----\n.*-----END PGP'
-                      ' PUBLIC KEY BLOCK-----)', re.DOTALL)
-  # Match fill fingerprints
-  FP_RE = re.compile(r'((?:[\dA-Fa-f]{4}' + ACCEPTABLE_WHITESPACE + r'*){10})')
-  # Match uids in the form of `name <email>`
-  UID_RE = re.compile(r'(.*) <(.*)>$')
-
-  # Fix up RE: removing leading quotes
-  FIXNAME1_RE = re.compile(r'^[\'"]')
-  # Fix up RE: removing trailing quotes
-  FIXNAME2_RE = re.compile(r'[\'"]$')
-  # Fix up RE: Squash whitespace in FPs.
-  FIXFP_RE = re.compile(ACCEPTABLE_WHITESPACE + r'+')
-
   @classmethod
   def parse_csv(self, filename, sep, name_field, email_field, fp_field,
                 ignore_emails, ignore_fps):

@@ -1,6 +1,7 @@
 # vim:shiftwidth=2:tabstop=2:expandtab:textwidth=80:softtabstop=2:ai:
 
 import os
+import re
 
 VERSION = '2.2.7'
 HOME = os.environ.get('HOME')
@@ -13,6 +14,22 @@ DEFAULT_MAIL_HOST = 'localhost'
 DEFAULT_MAIL_PORT = 587
 PIUS_HOME = os.path.join(HOME, '.pius')
 PIUS_RC = os.path.join(PIUS_HOME, 'piusrc')
+
+ACCEPTABLE_WHITESPACE_RE = r'[ \t\n]'
+# Match whole key blcoks
+KEY_RE = re.compile(r'(-----BEGIN PGP PUBLIC KEY BLOCK-----\n.*-----END PGP'
+                    ' PUBLIC KEY BLOCK-----)', re.DOTALL)
+# Match fill fingerprints
+FP_RE = re.compile(r'((?:[\dA-Fa-f]{4}' + ACCEPTABLE_WHITESPACE_RE + r'*){10})')
+# Match uids in the form of `name <email>`
+UID_RE = re.compile(r'(.*) <(.*)>$')
+
+# Fix up RE: removing leading quotes
+FIXNAME1_RE = re.compile(r'^[\'"]')
+# Fix up RE: removing trailing quotes
+FIXNAME2_RE = re.compile(r'[\'"]$')
+# Fix up RE: Squash whitespace in FPs.
+FIXFP_RE = re.compile(ACCEPTABLE_WHITESPACE_RE + r'+')
 
 # Note the line with the email address on it below is intentionally
 # shorter than the rest to give it space to grow and still be < 80.
