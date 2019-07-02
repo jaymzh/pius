@@ -20,10 +20,11 @@ import shutil
 import subprocess
 import sys
 
-from libpius import util
+from libpius.util import PiusUtil as util
+from libpius.util import MyOption as piusopt
 from libpius import mailer as pmailer
 from libpius.constants import (
-    VERSION, GPG_BASE_OPTS, GPG_QUIET_OPTS, GPG_FD_OPTS
+    VERSION, GPG_BASE_OPTS, GPG_QUIET_OPTS, GPG_FD_OPTS,
 )
 
 BADKEYS_RE = re.compile(r'00000000|12345678|no pgp key')
@@ -31,8 +32,6 @@ LIST_SEP_RE = re.compile(r'\s*,\s*')
 DEFAULT_KEYSERVERS = [
     'pool.sks-keyservers.net', 'pgp.mit.edu', 'keys.gnupg.net'
 ]
-HOME = os.environ.get('HOME')
-GNUPGHOME = os.environ.get('GNUPGHOME', os.path.join(HOME, '.gnupg'))
 DEFAULT_GPG_PATH = '/usr/bin/gpg'
 DEFAULT_CSV_DELIMITER = ','
 DEFAULT_CSV_NAME_FIELD = 2
@@ -500,7 +499,7 @@ you@company.com
 
   parser = optparse.OptionParser(usage=usage, description=intro, epilog=outro,
                                  version='%%prog %s' % VERSION,
-                                 option_class=util.MyOption)
+                                 option_class=piusopt)
   parser.set_defaults(delimiter=DEFAULT_CSV_DELIMITER,
                       name_field=DEFAULT_CSV_NAME_FIELD,
                       email_field=DEFAULT_CSV_EMAIL_FIELD,

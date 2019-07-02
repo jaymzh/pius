@@ -16,7 +16,7 @@ from libpius.constants import (
     DEFAULT_NON_MIME_EMAIL_TEXT,
 )
 from libpius.exceptions import EncryptionKeyError, MailSendError
-from libpius.util import clean_files, debug
+from libpius.util import PiusUtil as util
 
 
 class PiusMailer:
@@ -47,7 +47,7 @@ class PiusMailer:
                 % (self.host, msg))
           sys.exit(1)
 
-    debug(f"PiusMailer initialized with {user}@{host}:{port} (TLS: {tls})")
+    util.debug(f"PiusMailer initialized with {user}@{host}:{port} (TLS: {tls})")
 
   @staticmethod
   def add_options(parser, group=None):
@@ -77,7 +77,7 @@ class PiusMailer:
     group.add_option('-n', '--override-email', dest='mail_override',
                       metavar='EMAIL', nargs=1, type='email',
                       help='Rather than send to the user, send to this address.'
-                           ' Mostly useful for debugging.')
+                           ' Mostly useful for util.debugging.')
     group.add_option('-M', '--mail-text', dest='mail_text', metavar='FILE',
                       nargs=1, type='not_another_opt',
                       help='Use the text in FILE as the body of email when'
@@ -204,7 +204,7 @@ class PiusMailer:
     dos_body = encrypted_body.as_string().replace('\n', '\r\n')
     tmpfile = os.path.join(self.tmp_dir, 'pius_tmp')
     signed_tmpfile = '%s.asc' % tmpfile
-    clean_files([tmpfile, signed_tmpfile])
+    util.clean_files([tmpfile, signed_tmpfile])
     tfile = open(tmpfile, 'w')
     tfile.write(dos_body)
     tfile.close()
@@ -232,7 +232,7 @@ class PiusMailer:
     msg.attach(pgp_ver)
     msg.attach(pgp_data)
 
-    clean_files([tmpfile, signed_tmpfile])
+    util.clean_files([tmpfile, signed_tmpfile])
     return msg
 
   def _generate_non_pgp_mime_email(self, signer, email, keyid, filename):
@@ -281,7 +281,7 @@ class PiusMailer:
     '''Given a to and Message object, send email.'''
     # We don't duplicate the header logic in the sub functions, we
     # do that here
-    debug("send_mail called with to (%s), subject (%s)" % (to, msg['subject']))
+    util.debug("send_mail called with to (%s), subject (%s)" % (to, msg['subject']))
     if self.display_name:
       msg['From'] = self.display_name + ' <' + self.mail + '>'
     else:

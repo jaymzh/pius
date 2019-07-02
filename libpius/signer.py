@@ -8,7 +8,7 @@ import re
 import sys
 import subprocess
 
-from libpius.util import debug, clean_files, logcmd
+from libpius.util import PiusUtil
 from libpius.constants import (
   CERT_LEVEL_INFO, GPG_BASE_OPTS, GPG_QUIET_OPTS, GPG_FD_OPTS
 )
@@ -58,13 +58,13 @@ class PiusSigner:
     self.keyring = keyring
     self.sort_keyring = sort_keyring
     self.gpg = gpg_path
-    self.tmpdir = tmpdir
+    self.tmpdir = tmpdir or '/tmp'
     self.outdir = outdir
     self.encrypt_outfiles = encrypt_outfiles
     self.mail = mail
     self.mailer = mailer
     self.verbose = verbose
-    self.tmp_keyring = '%s/%s' % (self.tmpdir, PiusSigner.TMP_KEYRING_FILE)
+    self.tmp_keyring = os.path.join(self.tmpdir, PiusSigner.TMP_KEYRING_FILE)
     self.policy_url = policy_url
     self.mail_host = mail_host
     self.null = open(os.path.devnull, 'w')
@@ -72,7 +72,7 @@ class PiusSigner:
 
   def _check_gpg2(self):
     cmd = [self.gpg, '--version']
-    logcmd(cmd)
+    PiusUtil.logcmd(cmd)
     gpg = subprocess.Popen(
         cmd,
         stdin=self.null,
@@ -109,11 +109,11 @@ class PiusSigner:
 
   def cleanup(self):
     '''Cleanup all our temp files.'''
-    clean_files([self.tmp_keyring, ('%s~' % self.tmp_keyring)])
+    PiusUtil.clean_files([self.tmp_keyring, ('%s~' % self.tmp_keyring)])
 
   def get_all_keyids(self):
     '''Given a keyring, get all the KeyIDs from it.'''
-    debug('extracting all keyids from keyring')
+    PiusUtil.debug('extracting all keyids from keyring')
     cmd = [self.gpg] + GPG_BASE_OPTS + [
         '--keyring', self.keyring,
         '--no-options',
@@ -121,7 +121,7 @@ class PiusSigner:
         '--fingerprint',
         '--fixed-list-mode',
     ]
-    logcmd(cmd)
+    PiusUtil.logcmd(cmd)
     gpg = subprocess.Popen(
         cmd,
         stdin=self.null,
@@ -141,7 +141,7 @@ class PiusSigner:
       elif keyid and uid_re.match(line):
         lineparts = line.split(':')
         name = lineparts[9]
-        debug('Got id %s for %s' % (keyid, name))
+        PiusUtil.debug('Got id %s for %s' % (keyid, name))
         key_tuples.append((name, keyid))
         name = keyid = None
 
@@ -161,7 +161,7 @@ class PiusSigner:
         '--keyring', self.keyring,
         '--fingerprint', key,
     ]
-    logcmd(cmd)
+    PiusUtil.logcmd(cmd)
     gpg = subprocess.Popen(
       cmd,
       stdin=self.null,
@@ -209,7 +209,7 @@ class PiusSigner:
           '--with-colons',
           '--edit-key', key,
       ]
-    logcmd(cmd)
+    PiusUtil.logcmd(cmd)
     gpg = subprocess.Popen(cmd, stdin=subprocess.PIPE,
                            stdout=subprocess.PIPE,
                            stderr=subprocess.PIPE,
@@ -225,14 +225,14 @@ class PiusSigner:
 
       # skip the things we don't care about...
       if not line:
-        debug('breaking, EOF')
+        PiusUtil.debug('breaking, EOF')
         break
       if line == PiusSigner.GPG_PROMPT:
-        debug('got to command prompt')
+        PiusUtil.debug('got to command prompt')
         break
 
       # Parse the line...
-      debug('Got a line %s' % line)
+      PiusUtil.debug('Got a line %s' % line)
       fields = line.split(':')
 
       if fields[0] != 'uid':
@@ -242,7 +242,7 @@ class PiusSigner:
       uid = fields[9]
       index = int(fields[13].split(',')[0])
 
-      debug('Got UID %s with status %s' % (uid, status))
+      PiusUtil.debug('Got UID %s with status %s' % (uid, status))
 
       # If we can we capture an email address is saved for
       # emailing off signed keys (not yet implemented), and
@@ -257,14 +257,14 @@ class PiusSigner:
       match = re.search('.* <(.*)>', uid)
       if match:
         email = match.group(1)
-        debug('got email %s' % email)
+        PiusUtil.debug('got email %s' % email)
         filename = re.sub('@', '_at_', email)
         filename = '%s__%s' % (key, filename)
         uid = email
       else:
         # but if it doesn't have an email, do the right thing
         email = None
-        debug('no email')
+        PiusUtil.debug('no email')
         uid = re.sub(' ', '_', uid)
         uid = re.sub('\'', '', uid)
         filename = '%s__%s' % (key, uid)
@@ -273,19 +273,19 @@ class PiusSigner:
       filename = '%s__%s' % (filename, self.signer)
 
       if filename in unique_files:
-        debug('Filename is a duplicate')
+        PiusUtil.debug('Filename is a duplicate')
         count = 2
         while True:
           test = '%s_%s' % (filename, count)
-          debug('Trying %s' % test)
+          PiusUtil.debug('Trying %s' % test)
           if test not in unique_files:
-            debug('%s worked!' % test)
+            PiusUtil.debug('%s worked!' % test)
             filename = test
             break
           else:
             count += 1
       else:
-        debug('%s isn\'t in %s' % (filename, repr(unique_files)))
+        PiusUtil.debug('%s isn\'t in %s' % (filename, repr(unique_files)))
 
       # NOTE: Make sure to append the file BEFORE adding the extension
       #       since that's what we test against above!
@@ -301,7 +301,7 @@ class PiusSigner:
     # nothing in any of the pipes, so we use communicate() here which does
     # the right thing
     gpg.stdin.write("save\n")
-    debug('waiting')
+    PiusUtil.debug('waiting')
     gpg.wait()
 
     return uids
@@ -330,7 +330,7 @@ class PiusSigner:
           '--output', enc_path,
           '-e', filename,
       ]
-    logcmd(cmd)
+    PiusUtil.logcmd(cmd)
     gpg = subprocess.Popen(cmd, stdin=subprocess.PIPE,
                            stdout=subprocess.PIPE,
                            stderr=self.null,
@@ -339,33 +339,33 @@ class PiusSigner:
     # Must send a blank line...
     gpg.stdin.write('\n')
     while True:
-      debug('Waiting for response')
+      PiusUtil.debug('Waiting for response')
       line = gpg.stdout.readline().strip()
-      debug('Got %s' % line)
+      PiusUtil.debug('Got %s' % line)
       if PiusSigner.GPG_ENC_BEG in line:
-        debug('Got GPG_ENC_BEG')
+        PiusUtil.debug('Got GPG_ENC_BEG')
         continue
       elif PiusSigner.GPG_ENC_COMPLIANT_MODE in line:
-        debug('Got ENCRYPTION_COMPLIANCE_MODE')
+        PiusUtil.debug('Got ENCRYPTION_COMPLIANCE_MODE')
         continue
       elif PiusSigner.GPG_ENC_END in line:
-        debug('Got GPG_ENC_END')
+        PiusUtil.debug('Got GPG_ENC_END')
         break
       elif PiusSigner.GPG_ENC_INV in line:
-        debug('Got GPG_ENC_INV')
+        PiusUtil.debug('Got GPG_ENC_INV')
         raise EncryptionKeyError
       elif (PiusSigner.GPG_KEY_EXP in line or
             PiusSigner.GPG_SIG_EXP in line):
         # These just mean we passed a given key/sig that's expired, there
         # may be ones left that are good. We cannot report an error until
         # we get a ENC_INV.
-        debug('Got GPG_KEY_EXP')
+        PiusUtil.debug('Got GPG_KEY_EXP')
         continue
       elif PiusSigner.GPG_KEY_CONSIDERED in line:
-        debug('Got KEY_CONSIDERED')
+        PiusUtil.debug('Got KEY_CONSIDERED')
         continue
       elif PiusSigner.GPG_PROGRESS in line:
-        debug('Got skippable stuff')
+        PiusUtil.debug('Got skippable stuff')
         continue
       else:
         raise EncryptionUnknownError(line)
@@ -376,7 +376,7 @@ class PiusSigner:
   def _run_and_check_status(self, cmd, shell=False):
     '''Helper function for running a gpg call that requires no input
     but that we want to make sure succeeded.'''
-    logcmd(cmd)
+    PiusUtil.logcmd(cmd)
     gpg = subprocess.Popen(cmd, stdin=subprocess.PIPE,
                            stdout=self.null,
                            stderr=self.null,
@@ -404,14 +404,14 @@ class PiusSigner:
 
   def export_signed_uid(self, key, filename):
     '''Export the signed UID form working keyring.'''
-    debug('exporting %s' % key)
+    PiusUtil.debug('exporting %s' % key)
     self._export_key(self.tmp_keyring, [key], filename)
 
   def export_clean_key(self, key):
     '''Export clean key from the users' KeyID.'''
     # Export our public key and the given public key
     for x in [self.signer, key]:
-       debug('exporting %s' % x)
+       PiusUtil.debug('exporting %s' % x)
        path = self._tmpfile_path('%s.asc' % x)
        self._export_key(self.keyring, [x], path)
 
@@ -419,14 +419,14 @@ class PiusSigner:
     '''Delete the "clean" unsigned key which we exported temporarily.'''
     # Remove the temporary exports of the public keys
     paths = [self._tmpfile_path('%s.asc' % x) for x in [self.signer, key]]
-    clean_files(paths)
+    PiusUtil.clean_files(paths)
 
   def import_clean_key(self, key):
     '''Import the clean key we exported in export_clean_key() to our temp
     keyring.'''
     # Import the export of our public key and the given public key
     for x in [self.signer, key]:
-      debug('importing %s' % x)
+      PiusUtil.debug('importing %s' % x)
       import_opts = ['import-minimal']
       if x == self.signer:
         import_opts.append('keep-ownertrust')
@@ -454,12 +454,12 @@ class PiusSigner:
     '''Look for a specific string on the status-fd.'''
     line = ''
     while line not in (string,):
-      debug('Waiting for line %s' % string)
+      PiusUtil.debug('Waiting for line %s' % string)
       raw_line = fd.readline()
       if not raw_line:
         raise GpgUnknownError('gpg output unexpectedly ended')
       line = raw_line.strip()
-      debug('got line %s' % line)
+      PiusUtil.debug('got line %s' % line)
 
   def sign_uid(self, key, index, level):
     '''Sign a single UID of a key.'''
@@ -472,7 +472,7 @@ class PiusSigner:
           '--no-ask-cert-level',
           '--edit-key', key,
       ]  # NB: keep the `--edit-key <key>` at the very end of this list!
-    logcmd(cmd)
+    PiusUtil.logcmd(cmd)
     gpg = subprocess.Popen(
       cmd,
       stdin=subprocess.PIPE,
@@ -483,34 +483,34 @@ class PiusSigner:
       bufsize=1,
     )
 
-    debug('Waiting for prompt')
+    PiusUtil.debug('Waiting for prompt')
     self.gpg_wait_for_string(gpg.stdout, PiusSigner.GPG_PROMPT)
-    debug('Selecting UID %d' % index)
+    PiusUtil.debug('Selecting UID %d' % index)
     gpg.stdin.write('%s\n' % str(index))
-    debug('Waiting for ack')
+    PiusUtil.debug('Waiting for ack')
     self.gpg_wait_for_string(gpg.stdout, PiusSigner.GPG_ACK)
 
-    debug('Running sign subcommand')
+    PiusUtil.debug('Running sign subcommand')
     self.gpg_wait_for_string(gpg.stdout, PiusSigner.GPG_PROMPT)
-    debug('Sending sign command')
+    PiusUtil.debug('Sending sign command')
     gpg.stdin.write('sign\n')
     self.gpg_wait_for_string(gpg.stdout, PiusSigner.GPG_ACK)
 
     while True:
-      debug('Waiting for response')
+      PiusUtil.debug('Waiting for response')
       line = gpg.stdout.readline()
-      debug('Got %s' % line)
+      PiusUtil.debug('Got %s' % line)
       if PiusSigner.GPG_ALREADY_SIGNED in line:
         print('  UID already signed')
         gpg.stdin.write('quit\n')
         return False
       elif PiusSigner.GPG_KEY_CONSIDERED in line:
-        debug('Got KEY_CONSIDERED')
+        PiusUtil.debug('Got KEY_CONSIDERED')
         continue
       elif (PiusSigner.GPG_KEY_EXP in line or
             PiusSigner.GPG_SIG_EXP in line):
         # The user has an expired signing or encryption key, keep going
-        debug('Got GPG_KEY/SIG_EXP')
+        PiusUtil.debug('Got GPG_KEY/SIG_EXP')
         continue
       elif PiusSigner.GPG_PROMPT in line:
         # Unfortunately PGP doesn't give us anything parsable in this case. It
@@ -531,7 +531,7 @@ class PiusSigner:
         # Don't raise an exception, it's not probably just this UID...
         return False
 
-    debug('Confirming signing')
+    PiusUtil.debug('Confirming signing')
     gpg.stdin.write('Y\n')
     self.gpg_wait_for_string(gpg.stdout, PiusSigner.GPG_ACK)
 
@@ -551,7 +551,7 @@ class PiusSigner:
     #
     while True:
       line = gpg.stdout.readline()
-      debug('Got %s' % line)
+      PiusUtil.debug('Got %s' % line)
       # gpg1 + gpgagent1 reported BAD_PASSPHRASE for both the agent the wrong
       # passphrase, and for canceling the prompt.
       #
@@ -567,7 +567,7 @@ class PiusSigner:
         raise AgentError
       if 'BAD_PASSPHRASE' in line:
         line = gpg.stdout.readline()
-        debug('Got %s' % line)
+        PiusUtil.debug('Got %s' % line)
         if 'USERID_HINT' in line:
           continue
         print('  ERROR: Agent reported the passphrase was incorrect.')
@@ -577,7 +577,7 @@ class PiusSigner:
       if PiusSigner.GPG_PROMPT in line:
         break
 
-    debug('Saving key')
+    PiusUtil.debug('Saving key')
     gpg.stdin.write('save\n')
 
     gpg.wait()
@@ -721,7 +721,7 @@ class PiusSigner:
           '--output', outfile,
           infile,
       ]
-    logcmd(cmd)
+    PiusUtil.logcmd(cmd)
     gpg = subprocess.Popen(cmd, stdin=subprocess.PIPE,
                            stdout=subprocess.PIPE,
                            stderr=self.null,
@@ -743,30 +743,30 @@ class PiusSigner:
     ]
 
     while True:
-      debug('Waiting for response')
+      PiusUtil.debug('Waiting for response')
       line = gpg.stdout.readline().strip()
-      debug('Got %s' % line)
+      PiusUtil.debug('Got %s' % line)
       if PiusSigner.GPG_ENC_BEG in line:
-        debug('Got GPG_ENC_BEG')
+        PiusUtil.debug('Got GPG_ENC_BEG')
         continue
       elif PiusSigner.GPG_ENC_END in line:
-        debug('Got GPG_ENC_END')
+        PiusUtil.debug('Got GPG_ENC_END')
         break
       elif PiusSigner.GPG_ENC_INV in line:
-        debug('Got GPG_ENC_INV')
+        PiusUtil.debug('Got GPG_ENC_INV')
         raise EncryptionKeyError
       elif PiusSigner.GPG_KEY_CONSIDERED in line:
-        debug('Got KEY_CONSIDERED')
+        PiusUtil.debug('Got KEY_CONSIDERED')
         continue
       elif (PiusSigner.GPG_KEY_EXP in line or
             PiusSigner.GPG_SIG_EXP in line):
         # These just mean we passed a given key/sig that's expired, there
         # may be ones left that are good. We cannot report an error until
         # we get a ENC_INV.
-        debug('Got GPG_KEY/SIG_EXP')
+        PiusUtil.debug('Got GPG_KEY/SIG_EXP')
         continue
       elif any([s in line for s in skippable]):
-        debug('Got skippable stuff')
+        PiusUtil.debug('Got skippable stuff')
         continue
       else:
         raise EncryptionUnknownError(line)

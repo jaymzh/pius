@@ -25,7 +25,7 @@ from optparse import OptionParser
 
 from libpius import mailer as pmailer
 from libpius import signer as psigner
-from libpius import util
+from libpius.util import PiusUtil, MyOption
 from libpius.constants import (
     DEFAULT_GPG_PATH, DEFAULT_KEYRING, DEFAULT_MIME_EMAIL_TEXT,
     DEFAULT_NON_MIME_EMAIL_TEXT, DEFAULT_OUT_DIR, DEFAULT_TMP_DIR,
@@ -111,7 +111,7 @@ def main():
   usage = ('%prog [options] -s <signer_keyid> <keyid> [<keyid> ...]\n'
            '       %prog [options] -A -r <keyring_path> -s <signer_keyid>')
   parser = OptionParser(usage=usage, version='%%prog %s' % VERSION,
-                        option_class=util.MyOption)
+                        option_class=MyOption)
   parser.set_defaults(gpg_path=DEFAULT_GPG_PATH,
                       out_dir=DEFAULT_OUT_DIR,
                       tmp_dir=DEFAULT_TMP_DIR,
@@ -170,7 +170,7 @@ def main():
   pmailer.PiusMailer.add_options(parser)
 
   # Check for extra options in the ~/.pius file
-  all_opts = util.parse_dotfile(parser)
+  all_opts = PiusUtil.parse_dotfile(parser)
   # Note that by putting this at the end we allow the command line to override
   # options specified in the config file, BUT if any options conflict, the first
   # wins, so the config file wins. Meh.

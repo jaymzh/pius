@@ -7,103 +7,137 @@ import re
 from copy import copy
 from optparse import Option, OptionValueError
 
-from libpius.constants import PIUS_HOME, PIUS_RC
-
-DEBUG_ON = False
-VALID_OPTIONS = [
-    '--mail',
-    '--signer',
-    '--force-signer',
-    '--use-agent',
-    '--import',
-    '--mail-host',
-    '--mail-user',
-    '--mail-port',
-    '--mail-text',
-    '--no-mail-tls',
-    '--interactive',
-    '--all-keys',
-    '--gpg-agent',
-    '--gpg-path',
-    '--encrypt-outfiles',
-    '--debug',
-    '--no-sort-keyring',
-    '--override-email',
-    '--out-dir',
-    '--no-pgp-mime',
-    '--cache-passphrase',
-    '--keyring',
-    '--tmp-dir',
-    '--policy-url',
-    '--verbose',
-]
-EXPAND_USER_OPTIONS = [
-    '--gpg-path',
-    '--keyring',
-    '--mail-text',
-    '--out-dir',
-    '--tmp-dir',
-]
+from libpius.constants import HOME
 
 
-def debug(line):
-  '''Print a line, if debug is on, preceded with "DEBUG: ".'''
-  if DEBUG_ON:
-      print('DEBUG:', line)
+class PiusUtil:
+  DEBUG_ON = False
+  EXPAND_USER_OPTIONS = [
+      '--gpg-path',
+      '--keyring',
+      '--mail-text',
+      '--out-dir',
+      '--tmp-dir',
+  ]
+  FALLBACK_PIUSRC_PATH = os.path.join(HOME, '.pius')
 
+  def debug(line):
+    '''Print a line, if debug is on, preceded with "DEBUG: ".'''
+    if PiusUtil.DEBUG_ON:
+        print('DEBUG:', line)
 
-def logcmd(cmd):
-  debug("Running: %s" % ' '.join(cmd))
+  def logcmd(cmd):
+    PiusUtil.debug("Running: %s" % ' '.join(cmd))
 
+  def clean_files(flist):
+    '''Delete a list of files.'''
+    for cfile in flist:
+      if os.path.exists(cfile):
+        os.unlink(cfile)
 
-def clean_files(flist):
-  '''Delete a list of files.'''
-  for cfile in flist:
-    if os.path.exists(cfile):
-      os.unlink(cfile)
-
-
-def parse_dotfile(parser):
-  tmp_file = PIUS_HOME + 'rc'
-  sep = re.compile(r'(?:\s*=\s*|\s*:\s*\s+)')
-
-  # Handle conversion of old rc file
-  if os.path.isfile(PIUS_HOME):
-    print('Converting ~/.pius to ~/.pius/piusrc')
-    # temporarily rename ~/.pius to ~/.piusrc
-    os.rename(PIUS_HOME, tmp_file)
-    os.mkdir(PIUS_HOME, 0o755)
-    os.rename(tmp_file, PIUS_RC)
-  # Handle partial conversion
-  elif os.path.isfile(tmp_file) and not os.path.islink(tmp_file):
-    if not os.path.isdir(PIUS_HOME):
-      os.mkdir(PIUS_HOME, 0o755)
-    if not os.path.isfile(PIUS_RC):
-      os.rename(tmp_file, PIUS_RC)
+  def statedir():
+    # if the base XDG_DATA_HOME exists, (not our directory within, but the top
+    # level directory, usually ~/.local/share), then we'll use that, otherwise
+    # fall back to our own pathing.
+    xdg_data = os.environ.get('XDG_DATA_HOME',
+                              os.path.join(HOME, '.local', 'share'))
+    if os.path.exists(xdg_data):
+      state_dir = os.path.join(xdg_data, 'pius')
     else:
-      print('WARNING: Both %s and %s exist... ignoring %s' %
-            (PIUS_RC, tmp_file, tmp_file))
+      state_dir = os.path.join(HOME, '.pius')
+    PiusUtil.debug("Data dir: %s" % state_dir)
+    return state_dir
 
-  # if we have a config file, parse it
-  opts = []
-  if os.path.isfile(PIUS_RC):
-    fp = open(PIUS_RC, 'r')
-    for line in fp:
-      if line.startswith('#'):
+  def previous_statedirs():
+    return [os.path.join(HOME, '.pius')]
+
+  def configdir():
+    # if the base XDG_CONFIG_HOME exists, (not our directory within, but the top
+    # level directory, usually ~/.config), then we'll use that, otherwise
+    # fall back to our own pathing.
+    xdg_home = os.environ.get('XDG_CONFIG_HOME', os.path.join(HOME, '.config'))
+    if os.path.exists(xdg_home):
+      return os.path.join(xdg_home, 'pius')
+    return os.path.join(HOME, '.pius')
+
+  def dotfile_path():
+    # if the base XDG_CONFIG_HOME exists, (not our directory within, but the top
+    # level directory, usually ~/.config), then we'll use that, otherwise
+    # fall back to our own pathing.
+    return os.path.join(PiusUtil.configdir(), 'piusrc')
+
+  def previous_dotfile_paths():
+    return [
+        os.path.join(PiusUtil.FALLBACK_PIUSRC_PATH, 'piusrc'),
+        os.path.join(HOME, '.pius'),
+    ]
+
+  def migrate_file(old, new):
+    print('WARNING: Migrating %s to %s' % (old, new))
+    d = os.path.dirname(new)
+    if not os.path.isdir(d):
+      os.mkdir(d, 0o750)
+    os.rename(old, new)
+    os.symlink(new, old)
+
+  def handle_path_migration(new_path, old_paths):
+    PiusUtil.debug("Migration to from %s -> %s" % (old_paths, new_path))
+    for path in old_paths:
+      # if we don't have XDG than one our desired RC *is* one of the
+      # old paths, so don't try to convert between the same file and itself
+      if path == new_path:
         continue
-      parts = sep.split(line.strip())
-      if not parts[0].startswith('--'):
-        parts[0] = '--%s' % parts[0]
-      if parts[0] in EXPAND_USER_OPTIONS and len(parts) > 1:
-        parts[1] = os.path.expanduser(parts[1])
-      if parser.has_option(parts[0]):
-        opts.extend(parts)
-      elif not parts[0] in VALID_OPTIONS:
-        print('WARNING: Invalid line "%s" in %s, ignoring.' %
-              (line.strip(), PIUS_RC))
-    fp.close()
+      # If this old path doesn't exist at all, cool
+      if not os.path.exists(path):
+        continue
+      # If the new file doesn't exist and the old file does, convert it.
+      if not os.path.exists(new_path) and os.path.exists(path):
+        PiusUtil.migrate_file(path, new_path)
+      # If the new file exists and the old file is a symlink, we're good
+      elif os.path.exists(new_path) and os.path.islink(path):
+        continue
+      # If they're both a file, warn
+      elif (os.path.exists(new_path) and os.path.exists(path) and
+            os.path.islink(path)):
+        print('WARNING: Both %s and %s exist... ignoring %s' %
+              (new_path, path, path))
+        continue
 
-  return opts
+  def parse_dotfile(parser):
+    # People need a way to debug the parsing of the dotfile, which is before
+    # command-line parsing is done. So, of PIUS_DEBUG=1 in the env, we go ahead
+    # and turn debug on early.
+    if int(os.environ.get('PIUS_DEBUG', 0)) > 0:
+      PiusUtil.DEBUG_ON = True
+
+    sep = re.compile(r'(?:\s*=\s*|\s*:\s*\s+)')
+
+    piusrc = PiusUtil.dotfile_path()
+    PiusUtil.handle_path_migration(piusrc, PiusUtil.previous_dotfile_paths())
+
+    # if we have a config file, parse it
+    opts = []
+    if os.path.isfile(piusrc):
+      fp = open(piusrc, 'r')
+      for line in fp:
+        if line.startswith('#'):
+          continue
+        parts = sep.split(line.strip())
+        if not parts[0].startswith('--'):
+          parts[0] = '--%s' % parts[0]
+        if parts[0] in PiusUtil.EXPAND_USER_OPTIONS and len(parts) > 1:
+          parts[1] = os.path.expanduser(parts[1])
+        if parser.has_option(parts[0]):
+          opts.extend(parts)
+        else:
+          PiusUtil.debug(
+            'Line "%s" in %s is unknown, but that may be because that'
+            " option doesn't exist for this mode, so ignoring." %
+            (line.strip(), piusrc)
+          )
+      fp.close()
+
+    return opts
 
 
 #

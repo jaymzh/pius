@@ -3,8 +3,7 @@ import json
 import os
 import shutil
 
-from libpius.constants import PIUS_HOME
-from libpius import util
+from libpius.util import PiusUtil
 
 
 class SignState:
@@ -21,12 +20,14 @@ class SignState:
   kOUTBOUND = 'OUTBOUND'
   kINBOUND = 'INBOUND'
 
-  kPIUS_SIGNED_KEYS = os.path.join(PIUS_HOME, 'signed_keys')
+  kSIGNED_KEYS_DB_NAME = 'signed_keys'
 
   # metadata for current format
   kFILE_METADATA = {'_meta': {'version': 3}}
 
   def __init__(self):
+    self.signed_keys_db = os.path.join(PiusUtil.statedir(),
+                                       self.kSIGNED_KEYS_DB_NAME)
     self.state = {}
     self._load()
     self.modified = False
@@ -88,13 +89,21 @@ class SignState:
     """
     If it is not JSON, it's the original format of one signed key per line
     """
-    return (dict((key, {self.kOUTBOUND:'SIGNED', self.kINBOUND:None})
+    return (dict((key, {self.kOUTBOUND: 'SIGNED', self.kINBOUND: None})
             for key in data.strip().split("\n")))
 
   def load_signed_keys(self):
-    if not os.path.exists(self.kPIUS_SIGNED_KEYS):
+    PiusUtil.handle_path_migration(
+      self.signed_keys_db,
+      [
+        os.path.join(x, self.kSIGNED_KEYS_DB_NAME) for x in
+        PiusUtil.previous_statedirs()
+      ]
+    )
+
+    if not os.path.exists(self.signed_keys_db):
       return dict()
-    with open(self.kPIUS_SIGNED_KEYS, 'r') as fp:
+    with open(self.signed_keys_db, 'r') as fp:
       data = fp.read()
       # We have had multiple versions of the state file.
       #
@@ -113,13 +122,13 @@ class SignState:
       try:
         signstate = json.loads(data)
         if '_meta' in signstate and signstate['_meta']['version'] == 3:
-          util.debug('Loading v3 PIUS statefile')
+          PiusUtil.debug('Loading v3 PIUS statefile')
           del(signstate['_meta'])
         elif '_meta' not in signstate:
-          util.debug('Loading v2 PIUS statefile')
+          PiusUtil.debug('Loading v2 PIUS statefile')
           signstate = self.convert_from_v2(signstate)
       except ValueError:
-        util.debug('Loading v1 PIUS statefile')
+        PiusUtil.debug('Loading v1 PIUS statefile')
         signstate = self.convert_from_v1(data)
     return signstate
 
@@ -133,13 +142,13 @@ class SignState:
 
   def write_file(self, data):
     '''Separated out for easier unittesting'''
-    if not os.path.exists(PIUS_HOME):
-      os.mkdir(PIUS_HOME, 0o750)
-    if not os.path.isdir(PIUS_HOME):
-      print('WARNING: There is a ~/.pius which is not a directory.'
-            ' Not storing state.')
+    if not os.path.exists(PiusUtil.statedir()):
+      os.mkdir(PiusUtil.statedir(), 0o750)
+    if not os.path.isdir(PiusUtil.statedir()):
+      print('WARNING: There is a %s which is not a directory.'
+            ' Not storing state.' % PiusUtil.statedir())
       return
-    if os.path.exists(self.kPIUS_SIGNED_KEYS):
-      shutil.copy(self.kPIUS_SIGNED_KEYS, self.kPIUS_SIGNED_KEYS + '.save')
-    with open(self.kPIUS_SIGNED_KEYS, 'w') as fp:
+    if os.path.exists(self.signed_keys_db):
+      shutil.copy(self.signed_keys_db, self.signed_keys_db + '.save')
+    with open(self.signed_keys_db, 'w') as fp:
       fp.write(json.dumps(data))

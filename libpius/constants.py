@@ -4,6 +4,7 @@ import os
 import re
 
 VERSION = '2.2.7'
+
 HOME = os.environ.get('HOME')
 GNUPGHOME = os.environ.get('GNUPGHOME', os.path.join(HOME, '.gnupg'))
 DEFAULT_GPG_PATH = '/usr/bin/gpg2'
@@ -12,8 +13,6 @@ DEFAULT_TMP_DIR = '/tmp/pius_tmp'
 DEFAULT_OUT_DIR = '/tmp/pius_out'
 DEFAULT_MAIL_HOST = 'localhost'
 DEFAULT_MAIL_PORT = 587
-PIUS_HOME = os.path.join(HOME, '.pius')
-PIUS_RC = os.path.join(PIUS_HOME, 'piusrc')
 
 GPG_BASE_OPTS = [
     '--use-agent',
