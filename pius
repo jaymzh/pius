@@ -2,7 +2,7 @@
 """A utility to sign all UIDs on a list of PGP keys and PGP/Mime encrypt-email
 them to the respective emails."""
 
-# vim:shiftwidth=2:tabstop=2:expandtab:textwidth=80:softtabstop=2:ai:
+# vim:shiftwidth=4:tabstop=4:expandtab:textwidth=80:softtabstop=4:ai:
 
 #
 # Copyright (c) 2008 - present Phil Dibowitz (phil@ipom.com)
@@ -27,242 +27,339 @@ from libpius import mailer as pmailer
 from libpius import signer as psigner
 from libpius.util import PiusUtil, MyOption
 from libpius.constants import (
-    DEFAULT_GPG_PATH, DEFAULT_KEYRING, DEFAULT_MIME_EMAIL_TEXT,
-    DEFAULT_NON_MIME_EMAIL_TEXT, DEFAULT_OUT_DIR, DEFAULT_TMP_DIR,
-    VERSION
+    DEFAULT_GPG_PATH,
+    DEFAULT_KEYRING,
+    DEFAULT_MIME_EMAIL_TEXT,
+    DEFAULT_NON_MIME_EMAIL_TEXT,
+    DEFAULT_OUT_DIR,
+    DEFAULT_TMP_DIR,
+    VERSION,
 )
 from libpius.exceptions import MailSendError
 from libpius.state import SignState
 
 
 def print_default_email(no_mime):
-  '''Print the default email that is sent out.'''
-  interpolation_dict = {}
-  for p in ('keyid', 'signer', 'email'):
-      interpolation_dict[p] = '%(' + p + ')s'
-  print(
-    '  The default email text is below. To specify your own, simply use\n'
-    '  %(keyid)s %(signer)s and %(email)s in the body and they will be\n'
-    '  replaced with the relevant strings.\n'
-  )
-  print('  DEFAULT EMAIL TEXT:\n')
-  if not no_mime:
-      print(DEFAULT_MIME_EMAIL_TEXT % interpolation_dict)
-  else:
-      print(DEFAULT_NON_MIME_EMAIL_TEXT % interpolation_dict)
+    """Print the default email that is sent out."""
+    interpolation_dict = {}
+    for p in ("keyid", "signer", "email"):
+        interpolation_dict[p] = "%(" + p + ")s"
+    print(
+        "  The default email text is below. To specify your own, simply use\n"
+        "  %(keyid)s %(signer)s and %(email)s in the body and they will be\n"
+        "  replaced with the relevant strings.\n"
+    )
+    print("  DEFAULT EMAIL TEXT:\n")
+    if not no_mime:
+        print(DEFAULT_MIME_EMAIL_TEXT % interpolation_dict)
+    else:
+        print(DEFAULT_NON_MIME_EMAIL_TEXT % interpolation_dict)
 
 
 def check_options(parser, options, args):
-  '''Given the parsed options, sanity check them.'''
+    """Given the parsed options, sanity check them."""
 
-  if options.debug == True:
-    print('Setting debug')
-    util.DEBUG_ON = True
+    if options.debug == True:
+        print("Setting debug")
+        util.DEBUG_ON = True
 
-  if not os.path.exists(options.gpg_path):
-    parser.error('GnuPG binary not found at %s.' % options.gpg_path)
+    if not os.path.exists(options.gpg_path):
+        parser.error("GnuPG binary not found at %s." % options.gpg_path)
 
-  if not options.signer:
-    parser.error('You must specify a keyid to sign with.')
+    if not options.signer:
+        parser.error("You must specify a keyid to sign with.")
 
-  if options.keyring:
-    options.keyring = os.path.expanduser(options.keyring)
-    if not os.path.exists(options.keyring):
-      parser.error('Keyring %s doesn\'t exist' % options.keyring)
+    if options.keyring:
+        options.keyring = os.path.expanduser(options.keyring)
+        if not os.path.exists(options.keyring):
+            parser.error("Keyring %s doesn't exist" % options.keyring)
 
-  if not options.all_keys:
-    if not args:
-      parser.error('Keyid (or -A) required')
-  elif not options.keyring:
-    parser.error('The -A options requires the -r option')
+    if not options.all_keys:
+        if not args:
+            parser.error("Keyid (or -A) required")
+    elif not options.keyring:
+        parser.error("The -A options requires the -r option")
 
-  if options.mail and options.mail_no_pgp_mime and not options.encrypt_outfiles:
-    print('NOTE: -O and -m are present, turning on -e')
-    options.encrypt_outfiles = True
+    if (
+        options.mail
+        and options.mail_no_pgp_mime
+        and not options.encrypt_outfiles
+    ):
+        print("NOTE: -O and -m are present, turning on -e")
+        options.encrypt_outfiles = True
 
-  if options.mail_user and not options.mail_tls:
-    print('NOTE: -u is present, turning off -S.')
-    options.mail_tls = True
+    if options.mail_user and not options.mail_tls:
+        print("NOTE: -u is present, turning off -S.")
+        options.mail_tls = True
 
-  if options.mail_text and not options.mail:
-    parser.error('ERROR: -M requires -m')
+    if options.mail_text and not options.mail:
+        parser.error("ERROR: -M requires -m")
 
-  for mydir in (options.tmp_dir, options.out_dir):
-    if os.path.exists(mydir) and not os.path.isdir(mydir):
-      parser.error('%s exists but isn\'t a directory. It must not exist or be\n'
-                   'a directory.' % mydir)
-    if not os.path.exists(mydir):
-      os.mkdir(mydir, 0o700)
+    for mydir in (options.tmp_dir, options.out_dir):
+        if os.path.exists(mydir) and not os.path.isdir(mydir):
+            parser.error(
+                "%s exists but isn't a directory. It must not exist or be\n"
+                "a directory." % mydir
+            )
+        if not os.path.exists(mydir):
+            os.mkdir(mydir, 0o700)
+
 
 def warn_if_short_keyids(ids):
-  for keyid in ids:
-    if len(keyid) == 8:
-      print('WARNING: You passed in short keyids. Short keyids are forgable'
-            ' and should be avoided.')
-      ans = input('Type "I understand" to continue: ')
-      if ans == 'I understand':
-        return
-      else:
-        print('ERROR: Danger not acknowledged, exiting.')
-        sys.exit(1)
+    for keyid in ids:
+        if len(keyid) == 8:
+            print(
+                "WARNING: You passed in short keyids. Short keyids are forgable"
+                " and should be avoided."
+            )
+            ans = input('Type "I understand" to continue: ')
+            if ans == "I understand":
+                return
+            else:
+                print("ERROR: Danger not acknowledged, exiting.")
+                sys.exit(1)
+
 
 def main():
-  """Main."""
-  usage = ('%prog [options] -s <signer_keyid> <keyid> [<keyid> ...]\n'
-           '       %prog [options] -A -r <keyring_path> -s <signer_keyid>')
-  parser = OptionParser(usage=usage, version='%%prog %s' % VERSION,
-                        option_class=MyOption)
-  parser.set_defaults(gpg_path=DEFAULT_GPG_PATH,
-                      out_dir=DEFAULT_OUT_DIR,
-                      tmp_dir=DEFAULT_TMP_DIR,
-                      keyring=DEFAULT_KEYRING,
-                      sort_keyring=True)
-  parser.add_option('-A', '--all-keys', action='store_true', dest='all_keys',
-                    help='Sign all keys on the keyring. Requires -r.')
-  parser.add_option('-b', '--gpg-path', dest='gpg_path', metavar='PATH',
-                    nargs=1, type="not_another_opt",
-                    help='Path to gpg binary. [default: %default]')
-  parser.add_option('-e', '--encrypt-outfiles', action='store_true',
-                    dest='encrypt_outfiles',
-                    help='Encrypt output files with respective keys.')
-  parser.add_option('-d', '--debug', action='store_true', dest='debug',
-                    help='Enable debugging output.')
-  parser.add_option('-I', '--import', action='store_true',
-                    dest='import_keyring',
-                    help='Also import the unsigned keys from the keyring'
-                         ' into the default keyring. Ignored if -r is not'
-                         ' specified, or if it\'s the same as the default'
-                         ' keyring.')
-  parser.add_option('-m', '--mail', dest='mail', metavar='EMAIL', nargs=1,
-                    type='email',
-                    help='Email the encrypted, signed keys to the'
-                         ' respective email addresses. EMAIL is the address'
-                         ' to send from. See also -H and -P.')
-  parser.add_option('-N', '--no-sort-keyring', dest='sort_keyring',
-                    action='store_false',
-                    help='Do not sort the keyring by name.')
-  parser.add_option('-o', '--out-dir', dest='out_dir', metavar='OUTDIR',
-                    nargs=1, type='not_another_opt',
-                    help='Directory to put signed keys in. [default: %default]')
-  parser.add_option('-r', '--keyring', dest='keyring', metavar='KEYRING',
-                    nargs=1, type='not_another_opt',
-                    help='The keyring to use. Be sure to specify full or'
-                         ' relative path. Use a path: Just a filename may cause'
-                         ' GPG to assume relative to ~/.gnupg and cause'
-                         ' unexpected results. [default: %default]')
-  parser.add_option('-s', '--signer', dest='signer', nargs=1,
-                    type='keyid',
-                    help='The keyid to sign with (required).')
-  parser.add_option('-f', '--force-signer', dest='force_signer',
-                    type='keyid',
-                    help='Force GnuPG to use this exact keyid to sign (do not'
-                         ' guess subkey)')
-  parser.add_option('-t', '--tmp-dir', dest='tmp_dir', nargs=1,
-                    type='not_another_opt',
-                    help='Directory to put temporary stuff in. [default:'
-                         ' %default]')
-  parser.add_option('-T', '--print-default-email', dest='print_default_email',
-                    action='store_true', help='Print the default email.')
-  parser.add_option('-U', '--policy-url', dest='policy_url',
-                    help='Policy URL to include in each signature')
-  parser.add_option('-v', '--verbose', dest='verbose', action='store_true',
-                    help='Be more verbose.')
-  pmailer.PiusMailer.add_options(parser)
-
-  # Check for extra options in the ~/.pius file
-  all_opts = PiusUtil.parse_dotfile(parser)
-  # Note that by putting this at the end we allow the command line to override
-  # options specified in the config file, BUT if any options conflict, the first
-  # wins, so the config file wins. Meh.
-  all_opts.extend(sys.argv[1:])
-  (options, args) = parser.parse_args(all_opts)
-
-  print('Welcome to PIUS, the PGP Individual UID Signer.\n')
-
-  # The easy thing first...
-  if options.print_default_email:
-    print_default_email(options.mail_no_pgp_mime)
-    sys.exit(0)
-
-  # Check input to make sure users want sane things
-  check_options(parser, options, args)
-
-  # Check to see if the user wants to send email if they didn't specify
-  if not options.mail:
-    ans = input('Would you like to automatically send the signed UIDs to'
-                    ' their owners using\nPGP/Mime encryption as you sign each'
-                    ' one? ')
-    if ans in ('y', 'Y', 'yes', 'YES', 'Yes'):
-      ans = input('What email address should we send from? ')
-      util.check_email(parser, '-m', ans)
-      options.mail = ans
-      print()
-
-  if options.mail:
-    mailer = pmailer.PiusMailer(
-        options.mail,
-        options.display_name,
-        options.mail_host,
-        options.mail_port,
-        options.mail_user,
-        options.mail_tls,
-        options.mail_no_pgp_mime,
-        options.mail_override,
-        options.mail_text,
-        options.tmp_dir
+    """Main."""
+    usage = (
+        "%prog [options] -s <signer_keyid> <keyid> [<keyid> ...]\n"
+        "       %prog [options] -A -r <keyring_path> -s <signer_keyid>"
     )
-  else:
-    mailer = None
+    parser = OptionParser(
+        usage=usage, version="%%prog %s" % VERSION, option_class=MyOption
+    )
+    parser.set_defaults(
+        gpg_path=DEFAULT_GPG_PATH,
+        out_dir=DEFAULT_OUT_DIR,
+        tmp_dir=DEFAULT_TMP_DIR,
+        keyring=DEFAULT_KEYRING,
+        sort_keyring=True,
+    )
+    parser.add_option(
+        "-A",
+        "--all-keys",
+        action="store_true",
+        dest="all_keys",
+        help="Sign all keys on the keyring. Requires -r.",
+    )
+    parser.add_option(
+        "-b",
+        "--gpg-path",
+        dest="gpg_path",
+        metavar="PATH",
+        nargs=1,
+        type="not_another_opt",
+        help="Path to gpg binary. [default: %default]",
+    )
+    parser.add_option(
+        "-e",
+        "--encrypt-outfiles",
+        action="store_true",
+        dest="encrypt_outfiles",
+        help="Encrypt output files with respective keys.",
+    )
+    parser.add_option(
+        "-d",
+        "--debug",
+        action="store_true",
+        dest="debug",
+        help="Enable debugging output.",
+    )
+    parser.add_option(
+        "-I",
+        "--import",
+        action="store_true",
+        dest="import_keyring",
+        help="Also import the unsigned keys from the keyring"
+        " into the default keyring. Ignored if -r is not"
+        " specified, or if it's the same as the default"
+        " keyring.",
+    )
+    parser.add_option(
+        "-m",
+        "--mail",
+        dest="mail",
+        metavar="EMAIL",
+        nargs=1,
+        type="email",
+        help="Email the encrypted, signed keys to the"
+        " respective email addresses. EMAIL is the address"
+        " to send from. See also -H and -P.",
+    )
+    parser.add_option(
+        "-N",
+        "--no-sort-keyring",
+        dest="sort_keyring",
+        action="store_false",
+        help="Do not sort the keyring by name.",
+    )
+    parser.add_option(
+        "-o",
+        "--out-dir",
+        dest="out_dir",
+        metavar="OUTDIR",
+        nargs=1,
+        type="not_another_opt",
+        help="Directory to put signed keys in. [default: %default]",
+    )
+    parser.add_option(
+        "-r",
+        "--keyring",
+        dest="keyring",
+        metavar="KEYRING",
+        nargs=1,
+        type="not_another_opt",
+        help="The keyring to use. Be sure to specify full or"
+        " relative path. Use a path: Just a filename may cause"
+        " GPG to assume relative to ~/.gnupg and cause"
+        " unexpected results. [default: %default]",
+    )
+    parser.add_option(
+        "-s",
+        "--signer",
+        dest="signer",
+        nargs=1,
+        type="keyid",
+        help="The keyid to sign with (required).",
+    )
+    parser.add_option(
+        "-f",
+        "--force-signer",
+        dest="force_signer",
+        type="keyid",
+        help="Force GnuPG to use this exact keyid to sign (do not"
+        " guess subkey)",
+    )
+    parser.add_option(
+        "-t",
+        "--tmp-dir",
+        dest="tmp_dir",
+        nargs=1,
+        type="not_another_opt",
+        help="Directory to put temporary stuff in. [default:" " %default]",
+    )
+    parser.add_option(
+        "-T",
+        "--print-default-email",
+        dest="print_default_email",
+        action="store_true",
+        help="Print the default email.",
+    )
+    parser.add_option(
+        "-U",
+        "--policy-url",
+        dest="policy_url",
+        help="Policy URL to include in each signature",
+    )
+    parser.add_option(
+        "-v",
+        "--verbose",
+        dest="verbose",
+        action="store_true",
+        help="Be more verbose.",
+    )
+    pmailer.PiusMailer.add_options(parser)
 
-  signer = psigner.PiusSigner(
-      options.signer,
-      options.force_signer,
-      options.keyring,
-      options.gpg_path,
-      options.tmp_dir,
-      options.out_dir,
-      options.encrypt_outfiles,
-      options.mail,
-      mailer,
-      options.verbose,
-      options.sort_keyring,
-      options.policy_url,
-      options.mail_host
-  )
+    # Check for extra options in the ~/.pius file
+    all_opts = PiusUtil.parse_dotfile(parser)
+    # Note that by putting this at the end we allow the command line to override
+    # options specified in the config file, BUT if any options conflict, the first
+    # wins, so the config file wins. Meh.
+    all_opts.extend(sys.argv[1:])
+    (options, args) = parser.parse_args(all_opts)
 
-  if options.all_keys:
-    key_list = signer.get_all_keyids()
-    if len(key_list) == 0:
-      print("ERROR: Failed to find keys on this keyring\n")
-      sys.exit(1)
-    if args:
-      key_list.extend(args)
-  else:
-    warn_if_short_keyids(args)
-    key_list = args
+    print("Welcome to PIUS, the PGP Individual UID Signer.\n")
 
-  # The actual signing
-  signed_keys = {}
-  state = SignState()
-  for key in key_list:
-    retval = signer.check_fingerprint(key)
-    if retval == False:
-      continue
-    print('Signing all UIDs on key %s' % key)
-    if signer.sign_all_uids(key, retval):
-      state.update_outbound(key, SignState.kSIGNED)
-    print('')
+    # The easy thing first...
+    if options.print_default_email:
+        print_default_email(options.mail_no_pgp_mime)
+        sys.exit(0)
 
-  # If the user asked, import the keys
-  if options.import_keyring:
-    if (not options.keyring) or (options.keyring == DEFAULT_KEYRING):
-      print('WARNING: Ignoring -I: Either -r wasn\'t specified, or it was'
-            ' the same as the default keyring.')
+    # Check input to make sure users want sane things
+    check_options(parser, options, args)
+
+    # Check to see if the user wants to send email if they didn't specify
+    if not options.mail:
+        ans = input(
+            "Would you like to automatically send the signed UIDs to"
+            " their owners using\nPGP/Mime encryption as you sign each"
+            " one? "
+        )
+        if ans in ("y", "Y", "yes", "YES", "Yes"):
+            ans = input("What email address should we send from? ")
+            util.check_email(parser, "-m", ans)
+            options.mail = ans
+            print()
+
+    if options.mail:
+        mailer = pmailer.PiusMailer(
+            options.mail,
+            options.display_name,
+            options.mail_host,
+            options.mail_port,
+            options.mail_user,
+            options.mail_tls,
+            options.mail_no_pgp_mime,
+            options.mail_override,
+            options.mail_text,
+            options.tmp_dir,
+        )
     else:
-      signer.import_unsigned_keys()
+        mailer = None
 
-  signer.cleanup()
-  state.save()
+    signer = psigner.PiusSigner(
+        options.signer,
+        options.force_signer,
+        options.keyring,
+        options.gpg_path,
+        options.tmp_dir,
+        options.out_dir,
+        options.encrypt_outfiles,
+        options.mail,
+        mailer,
+        options.verbose,
+        options.sort_keyring,
+        options.policy_url,
+        options.mail_host,
+    )
 
-if __name__ == '__main__':
-  main()
+    if options.all_keys:
+        key_list = signer.get_all_keyids()
+        if len(key_list) == 0:
+            print("ERROR: Failed to find keys on this keyring\n")
+            sys.exit(1)
+        if args:
+            key_list.extend(args)
+    else:
+        warn_if_short_keyids(args)
+        key_list = args
+
+    # The actual signing
+    signed_keys = {}
+    state = SignState()
+    for key in key_list:
+        retval = signer.check_fingerprint(key)
+        if retval == False:
+            continue
+        print("Signing all UIDs on key %s" % key)
+        if signer.sign_all_uids(key, retval):
+            state.update_outbound(key, SignState.kSIGNED)
+        print("")
+
+    # If the user asked, import the keys
+    if options.import_keyring:
+        if (not options.keyring) or (options.keyring == DEFAULT_KEYRING):
+            print(
+                "WARNING: Ignoring -I: Either -r wasn't specified, or it was"
+                " the same as the default keyring."
+            )
+        else:
+            signer.import_unsigned_keys()
+
+    signer.cleanup()
+    state.save()
+
+
+if __name__ == "__main__":
+    main()
