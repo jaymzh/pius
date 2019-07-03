@@ -1,3 +1,15 @@
+3.0.0-beta
+phil@ipom.com
+- Port to python3
+- Support for XDG_CONFIG_HOME and XDG_DATA_HOME (closes #99)
+- Make options across all binaries consistent
+- [pius-keyring-mgr] Add support for piusrc
+- Remove gpg1 support
+- Remove cached-passphrase support (was gpg1-specific)
+- Remove interactive mode (was gpg1-specific)
+mdujava@gmail.com
+- Expand user '~' in options
+
 2.2.7
 Released 2/9/19
 phil@ipom.com
