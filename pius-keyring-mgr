@@ -236,8 +236,10 @@ class KeyringBuilder:
     extra_opts = GPG_QUIET_OPTS + self.AUTO_OPTS
     cmd = self.basecmd + extra_opts + ['--import', kfile]
     util.logcmd(cmd)
-    gpg = subprocess.Popen(cmd, shell=False, stdin=None, close_fds=True,
-                           stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    gpg = subprocess.Popen(
+        cmd, shell=False, stdin=None, close_fds=True, text=True,
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE
+    )
     for line in gpg.stdout:
       parts = line.strip().split(' ')
       if parts[1] == 'IMPORTED':
@@ -294,8 +296,10 @@ class KeyringBuilder:
   #
   def have_key(self, key):
     cmd = self.basecmd + GPG_QUIET_OPTS + ['--fingerprint', key]
-    gpg = subprocess.Popen(cmd, shell=False, stdin=None, close_fds=True,
-                           stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    gpg = subprocess.Popen(
+        cmd, shell=False, stdin=None, close_fds=True, text=True,
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE
+    )
     gpg.wait()
     retval = gpg.returncode
     if retval == 0:
@@ -313,8 +317,10 @@ class KeyringBuilder:
     for ks in self.keyservers:
       cmd = basecmd + ['--keyserver', ks, '--recv-key', key]
       util.logcmd(cmd)
-      gpg = subprocess.Popen(cmd, shell=False, stdin=None, close_fds=True,
-                             stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+      gpg = subprocess.Popen(
+          cmd, shell=False, stdin=None, close_fds=True, text=True,
+          stdout=subprocess.PIPE, stderr=subprocess.PIPE
+      )
       gpg.wait()
       retval = gpg.returncode
       if retval == 0:
@@ -374,7 +380,7 @@ class KeyringBuilder:
     extra_opts = GPG_QUIET_OPTS + self.AUTO_OPTS + ['--fixed-list-mode']
     cmd = self.basecmd + extra_opts + ['--fingerprint']
     util.logcmd(cmd)
-    gpg = subprocess.Popen(cmd, shell=False, stdout=subprocess.PIPE,
+    gpg = subprocess.Popen(cmd, shell=False, text=True, stdout=subprocess.PIPE,
                            stderr=subprocess.STDOUT)
     # We use 'pub' instead of 'fpr' to support old crufty keys too...
     pub_re = re.compile('^pub:')
@@ -404,7 +410,7 @@ class KeyringBuilder:
     shareable format. Once it exists, we'll continue to use it.
     '''
     if self.exported_keyring is None:
-      debug("Not exporting keyring, exported_keyring is None")
+      util.debug("Not exporting keyring, exported_keyring is None")
       return
     cmd = self.basecmd + GPG_QUIET_OPTS + [
       '--export',
@@ -429,7 +435,7 @@ class KeyringBuilder:
     ]
     for fp in keyids:
       cmd = basecmd + [fp]
-      gpg = subprocess.Popen(cmd, shell=False, stdout=subprocess.PIPE)
+      gpg = subprocess.Popen(cmd, text=True, shell=False, stdout=subprocess.PIPE)
       for line in gpg.stdout:
           print(line.strip())
       ans = input('Delete this key? (\'yes\' to delete, \'q\' to quit'

@@ -14,6 +14,16 @@ DEFAULT_OUT_DIR = '/tmp/pius_out'
 DEFAULT_MAIL_HOST = 'localhost'
 DEFAULT_MAIL_PORT = 587
 
+# used instead of base_opts by pius-report
+# which is in fact using the default keyring
+GPG_MIN_OPTS = [
+    '--use-agent',
+    '--keyid-format', 'long',
+    # not strictly speaking necessary, but no need to slow pius-report
+    # down by checking the trustdb in the middle of things
+    '--no-auto-check-trustdb',
+]
+
 GPG_BASE_OPTS = [
     '--use-agent',
     '--keyid-format', 'long',
