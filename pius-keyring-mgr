@@ -220,10 +220,8 @@ class KeyringBuilder:
     """A class for building and managing keyrings."""
 
     AUTO_OPTS = GPG_FD_OPTS + [
-        "--command-fd",
-        "0",
-        "--status-fd",
-        "1",
+        "--command-fd", "0",
+        "--status-fd", "1",
         "--no-options",
         "--with-colons",
     ]

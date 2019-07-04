@@ -1,4 +1,4 @@
-3.0.0-beta
+3.x
 phil@ipom.com
 - Port to python3
 - Support for XDG_CONFIG_HOME and XDG_DATA_HOME (closes #99)

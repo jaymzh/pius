@@ -18,8 +18,7 @@ DEFAULT_MAIL_PORT = 587
 # which is in fact using the default keyring
 GPG_MIN_OPTS = [
     "--use-agent",
-    "--keyid-format",
-    "long",
+    "--keyid-format", "long",
     # not strictly speaking necessary, but no need to slow pius-report
     # down by checking the trustdb in the middle of things
     "--no-auto-check-trustdb",
@@ -27,8 +26,7 @@ GPG_MIN_OPTS = [
 
 GPG_BASE_OPTS = [
     "--use-agent",
-    "--keyid-format",
-    "long",
+    "--keyid-format", "long",
     "--no-default-keyring",
     # must be specified anytime no-default-keyring is specified
     "--no-auto-check-trustdb",
