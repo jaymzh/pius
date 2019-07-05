@@ -3,7 +3,7 @@
 import os
 import re
 
-VERSION = "3.0.x"
+VERSION = "3.0.0"
 
 HOME = os.environ.get("HOME")
 GNUPGHOME = os.environ.get("GNUPGHOME", os.path.join(HOME, ".gnupg"))

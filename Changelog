@@ -1,4 +1,5 @@
-3.x
+3.0.0
+Released 2019-07-05
 phil@ipom.com
 - Port to python 3
 - Support for XDG_CONFIG_HOME and XDG_DATA_HOME (closes #99). Note this moves
