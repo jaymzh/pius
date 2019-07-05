@@ -1,8 +1,10 @@
 3.x
 phil@ipom.com
-- Port to python3
-- Support for XDG_CONFIG_HOME and XDG_DATA_HOME (closes #99)
+- Port to python 3
+- Support for XDG_CONFIG_HOME and XDG_DATA_HOME (closes #99). Note this moves
+the default config file location automatically and creates a symlink.
 - Make options across all binaries consistent
+- [pius-keyring-mgr] Add proper mail server support options
 - [pius-keyring-mgr] Add support for piusrc
 - Remove gpg1 support
 - Remove cached-passphrase support (was gpg1-specific)
