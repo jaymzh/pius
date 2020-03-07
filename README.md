@@ -91,7 +91,7 @@ docs](https://support.google.com/accounts/answer/185833?hl=en).
 ## Other Platforms
 
 On non-UNIX platforms such as MacOS and Windows, the default gpg path will
-likley be incorrect, so you'll want to use `-b` to specify the path.
+likely be incorrect, so you'll want to use `-b` to specify the path.
 
 
 ## Config File
