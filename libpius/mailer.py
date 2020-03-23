@@ -403,7 +403,7 @@ class PiusMailer:
                 # BCC the user...
                 env_to = [msg["To"], self.mail]
 
-            smtp.sendmail(self.mail, env_to, msg.as_string())
+            smtp.sendmail(self.mail, env_to, msg.as_string().encode('utf-8'))
             smtp.quit()
         except smtplib.SMTPException as emsg:
             raise MailSendError(emsg)

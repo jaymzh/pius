@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+
 """A utility to create and manage party keyrings."""
 
 # vim:tw=80:ai:tabstop=4:expandtab:shiftwidth=4
@@ -446,7 +447,7 @@ class KeyringBuilder:
     # stolen from pius
     def get_all_keyids(self, sort_keyring):
         """Given a keyring, get all the KeyIDs from it."""
-        util.debug("extracting all keyids from keyring")
+        util.debug("extracting all keyids from keyring, sort: %s" % sort_keyring)
         extra_opts = GPG_QUIET_OPTS + self.AUTO_OPTS + ["--fixed-list-mode"]
         cmd = self.basecmd + extra_opts + ["--fingerprint"]
         util.logcmd(cmd)
@@ -776,6 +777,7 @@ before distributing they keyring.
     prune.add_option(
         "--no-sort-keyring",
         dest="sort_keyring",
+        default=True,
         action="store_false",
         help="Do not sort the keyring by name.",
     )
