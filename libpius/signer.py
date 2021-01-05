@@ -399,6 +399,7 @@ class PiusSigner:
             stdout=subprocess.PIPE,
             stderr=self.null,
             close_fds=True,
+            text=True,
         )
 
         # Must send a blank line...
