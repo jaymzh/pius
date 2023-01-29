@@ -31,6 +31,7 @@ class PiusMailer:
         port,
         user,
         tls,
+        ssl,
         no_mime,
         override,
         msg_text,
@@ -43,6 +44,7 @@ class PiusMailer:
         self.user = user
         self.password = ""
         self.tls = tls
+        self.ssl = ssl
         self.no_pgp_mime = no_mime
         self.address_override = override
         self.message_text = msg_text
@@ -77,6 +79,7 @@ class PiusMailer:
             mail_host=DEFAULT_MAIL_HOST,
             mail_port=DEFAULT_MAIL_PORT,
             mail_tls=True,
+            mail_ssl=False,
         )
         group.add_option(
             "-D",
@@ -102,6 +105,12 @@ class PiusMailer:
             action="store_false",
             dest="mail_tls",
             help="Do not use STARTTLS when talking to the SMTP" " server.",
+        )
+        group.add_option(
+            "--ssl",
+            action="store_true",
+            dest="mail_ssl",
+            help="Use SSL when talking to the SMTP server.",
         )
         group.add_option(
             "-P",
@@ -175,7 +184,10 @@ class PiusMailer:
     def verify_pass(self):
         """Verify the password we got works for SMTPAUTH."""
         try:
-            smtp = smtplib.SMTP(self.host, self.port)
+            if self.ssl:
+                smtp = smtplib.SMTP_SSL(self.host, self.port)
+            else:
+                smtp = smtplib.SMTP(self.host, self.port)
         except socket.error as msg:
             raise MailSendError(msg)
 
@@ -188,13 +200,14 @@ class PiusMailer:
         # So, in order be secure on older pythons we ehlo() and then check the
         # response before attempting startls.
         try:
-            smtp.ehlo()
-            if not smtp.has_extn("STARTTLS"):
-                # Emulate 2.6 behavior
-                raise smtplib.SMTPException("Server does not support STARTTLS")
-            smtp.starttls()
-            # must ehlo after startls
-            smtp.ehlo()
+            if not self.ssl:
+                smtp.ehlo()
+                if not smtp.has_extn("STARTTLS"):
+                    # Emulate 2.6 behavior
+                    raise smtplib.SMTPException("Server does not support STARTTLS")
+                smtp.starttls()
+                # must ehlo after startls
+                smtp.ehlo()
             smtp.login(self.user, self.password)
         except smtplib.SMTPAuthenticationError:
             return False
@@ -374,27 +387,32 @@ class PiusMailer:
         msg["Date"] = formatdate(localtime=True)
 
         try:
-            smtp = smtplib.SMTP(self.host, self.port)
+            if self.ssl:
+                smtp = smtplib.SMTP_SSL(self.host, self.port)
+            else:
+                smtp = smtplib.SMTP(self.host, self.port)
             if self.tls:
-                # NOTE WELL: SECURITY IMPORTANT NOTE!
-                #
-                # In python 2.6 if you attempt to starttls() and the server
-                # doesn't understand an exception is raised. However before
-                # that, it just carried on and one could attempt to auth over a
-                # plain-text session.  This is BAD!
-                #
-                # So, in order be secure on older pythons we ehlo() and then
-                # check the response before attempting startls.
-                smtp.ehlo()
-                if not smtp.has_extn("STARTTLS"):
-                    # Emulate 2.6 behavior
-                    raise smtplib.SMTPException(
-                        "Server does not support STARTTLS"
-                    )
-                smtp.starttls()
-                # must re-ehlo after STARTTLS
-                smtp.ehlo()
-                # Don't want to send auth information unless we're TLS'd
+                if not self.ssl:
+                    # NOTE WELL: SECURITY IMPORTANT NOTE!
+                    #
+                    # In python 2.6 if you attempt to starttls() and the server
+                    # doesn't understand an exception is raised. However before
+                    # that, it just carried on and one could attempt to auth over a
+                    # plain-text session.  This is BAD!
+                    #
+                    # So, in order be secure on older pythons we ehlo() and then
+                    # check the response before attempting startls.
+                    smtp.ehlo()
+                    if not smtp.has_extn("STARTTLS"):
+                        # Emulate 2.6 behavior
+                        raise smtplib.SMTPException(
+                            "Server does not support STARTTLS"
+                        )
+                    smtp.starttls()
+                    # must re-ehlo after STARTTLS
+                    smtp.ehlo()
+
+                    # Don't want to send auth information unless we're TLS'd
                 if self.user:
                     smtp.login(self.user, self.password)
             if self.address_override:

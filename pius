@@ -300,6 +300,7 @@ def main():
             options.mail_port,
             options.mail_user,
             options.mail_tls,
+            options.mail_ssl,
             options.mail_no_pgp_mime,
             options.mail_override,
             options.mail_text,
