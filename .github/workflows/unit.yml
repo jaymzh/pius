@@ -13,7 +13,7 @@ jobs:
       matrix:
         python-versions: ["3.6.5", "3.7", "3.8", "3.9"]
 
-    streps:
+    steps:
       - uses: actions/checkout@v3
       - name: Setup Python ${{ matrix.python-version  }}
         uses: actions/setup-python@v4
@@ -23,7 +23,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install flake8 pytest
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          pip install -r requirements.txt
 #      - name: Lint with flake8
 #        run: |
 #          # stop the build if there are Python syntax errors or undefined names
@@ -32,4 +32,4 @@ jobs:
 #          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
       - name: Test with pytest
         run: |
-          pytest
+          ./run_tests
