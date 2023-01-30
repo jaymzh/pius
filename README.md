@@ -1,6 +1,6 @@
 # PIUS: The PGP Individual UID Signer
 
-![CircleCI](https://circleci.com/gh/jaymzh/pius.svg?style=svg)
+[![Unittest](https://github.com/jaymzh/pius/workflows/Unittests/badge.svg)](https://github.com/jaymzh/pius/actions?query=workflow%3AUnittests)
 
 ## Introduction
 
