@@ -1,6 +1,8 @@
 INSTALLATION
 
-Installation is easy:
+For most people, installing using your OS or distribution's native package manager is the best option. However, you can install from source if you wish.
+
+Installation from source is easy:
 
   ./setup.py build
   sudo ./setup.py install
