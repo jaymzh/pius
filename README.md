@@ -33,7 +33,7 @@ There are a variety of other options that you may want:
 * customize mail hostname and port (-H and -P respectively)
 * customize the email message (-M)
 * don't use PGP/Mime in the email (-O, implies -e)
-* specify a SMTPAUTH or STARTTLS for SMTP (-u and -S)
+* specify a SMTPAUTH/STARTTLS (-u and -S) or SSL (--ssl) for SMTP
 
 And more! See the '-h' option for more.
 

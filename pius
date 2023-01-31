@@ -88,9 +88,12 @@ def check_options(parser, options, args):
         print("NOTE: -O and -m are present, turning on -e")
         options.encrypt_outfiles = True
 
-    if options.mail_user and not options.mail_tls:
-        print("NOTE: -u is present, turning off -S.")
+    if options.mail_user and not (options.mail_tls or options.mail_ssl):
+        print("NOTE: -u is present, enabling TLS by default.")
         options.mail_tls = True
+
+    if options.mail_tls and options.mail_ssl:
+        parser.error("ERROR: TLS and SSL cannot be used at the same time.")
 
     if options.mail_text and not options.mail:
         parser.error("ERROR: -M requires -m")
