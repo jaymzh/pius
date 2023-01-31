@@ -1,6 +1,6 @@
 # PIUS: The PGP Individual UID Signer
 
-[![Unittest](https://github.com/jaymzh/pius/workflows/unit.yml/badge.svg)](https://github.com/jaymzh/pius/actions/workflows/unit.yml)
+[![Unittest](https://github.com/jaymzh/pius/actions/workflows/unit.yml/badge.svg)](https://github.com/jaymzh/pius/actions/workflows/unit.yml)
 
 ## Introduction
 
