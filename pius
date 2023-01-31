@@ -89,7 +89,7 @@ def check_options(parser, options, args):
         options.encrypt_outfiles = True
 
     if options.mail_user and not (options.mail_tls or options.mail_ssl):
-        print("NOTE: -u is present, enabling TLS by default.")
+        print("NOTE: -u (SMTPAUTH) is present, enabling TLS. Either TLS or SSL is required with SMTPAUTH")
         options.mail_tls = True
 
     if options.mail_tls and options.mail_ssl:
