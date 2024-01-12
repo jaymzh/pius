@@ -7,8 +7,8 @@ VERSION = "3.0.0"
 
 HOME = os.environ.get("HOME")
 GNUPGHOME = os.environ.get("GNUPGHOME", os.path.join(HOME, ".gnupg"))
-DEFAULT_GPG_PATH = "/usr/bin/gpg2"
-DEFAULT_KEYRING = os.path.join(GNUPGHOME, "pubring.gpg")
+DEFAULT_GPG_PATH = "/usr/bin/gpg"
+DEFAULT_KEYRING = os.path.join(GNUPGHOME, "pubring.kbx")
 DEFAULT_TMP_DIR = "/tmp/pius_tmp"
 DEFAULT_OUT_DIR = "/tmp/pius_out"
 DEFAULT_MAIL_HOST = "localhost"
