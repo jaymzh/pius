@@ -16,7 +16,7 @@ PIUS is packaged in a wide variety of distributions; the table below lists them.
 If your distribution or OS is listed, using the included package manager is by
 far the easiest method of installation. 
 
-[![Packaging status](https://repology.org/badge/vertical-allrepos/pius.svg)](https://repology.org/project/pius/versions)
+[![Packaging status](https://repology.org/badge/vertical-allrepos/pius.svg?exclude_unsupported=1)](https://repology.org/project/pius/versions)
 
 If PIUS isn't available for your OS or distribution, see the `INSTALL` file for
 instructions on installing from source.
