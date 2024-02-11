@@ -74,7 +74,7 @@ Something like this should work:
 
 Then, don't forget to send it to a keyserver:
 
-   gpg --keyserver pool.sks-keyservers.net --send-key %(keyid)s
+   gpg --keyserver keys.openpgp.org --send-key %(keyid)s
 
 If you have any questions, let me know.
 
@@ -99,7 +99,7 @@ Something like this should work:
 
 Then, don't forget to send it to a keyserver:
 
-   gpg --keyserver pool.sks-keyservers.net --send-key %(keyid)s
+   gpg --keyserver keys.openpgp.org --send-key %(keyid)s
 
 If you have any questions, let me know.
 
