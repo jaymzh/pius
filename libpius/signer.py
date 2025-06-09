@@ -298,13 +298,22 @@ class PiusSigner:
             # For the normal case (have email), we'll be storing each email
             # twice but that's OK since it means that email is *always* a valid
             # email or None and id is *always* a valid identifier
-            match = re.search(".* <(.*)>", uid)
+            match = re.search("^.* <(.*)>$", uid)
             if match:
                 email = match.group(1)
                 PiusUtil.debug("got email %s" % email)
                 filename = re.sub("@", "_at_", email)
                 filename = "%s__%s" % (key, filename)
                 uid = email
+            # It is possible for the UID to be JUST a raw email address, so
+            # if that appears to be the case, use that
+            elif re.match(
+                "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$", uid
+            ):
+                email = uid
+                PiusUtil.debug("got email %s" % email)
+                filename = re.sub("@", "_at_", email)
+                filename = "%s__%s" % (key, filename)
             else:
                 # but if it doesn't have an email, do the right thing
                 email = None
@@ -442,7 +451,7 @@ class PiusSigner:
 
     def _run_and_check_status(self, cmd, shell=False):
         """Helper function for running a gpg call that requires no input
-    but that we want to make sure succeeded."""
+        but that we want to make sure succeeded."""
         PiusUtil.logcmd(cmd)
         gpg = subprocess.Popen(
             cmd,
@@ -495,7 +504,7 @@ class PiusSigner:
 
     def import_clean_key(self, key):
         """Import the clean key we exported in export_clean_key() to our temp
-    keyring."""
+        keyring."""
         # Import the export of our public key and the given public key
         for x in [self.signer, key]:
             PiusUtil.debug("importing %s" % x)
@@ -690,7 +699,7 @@ class PiusSigner:
         uids = self.get_uids(key)
         print(
             "  There %s %s UID%s on this key to sign"
-            % (["is", "are"][len(uids) != 1], len(uids), "s"[len(uids) == 1:])
+            % (["is", "are"][len(uids) != 1], len(uids), "s"[len(uids) == 1 :])
         )
 
         # From the user key ring make a clean copy
@@ -812,7 +821,7 @@ class PiusSigner:
     def encrypt_and_sign_file(self, infile, outfile, keyid):
         """Encrypt and sign a file.
 
-    Used for PGP/Mime email generation."""
+        Used for PGP/Mime email generation."""
         cmd = (
             [self.gpg]
             + GPG_BASE_OPTS

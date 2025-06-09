@@ -27,7 +27,8 @@ class PiusUtil:
             print("DEBUG:", line)
 
     def logcmd(cmd):
-        PiusUtil.debug("Running: %s" % " ".join(cmd))
+        outcmd = " ".join(cmd) if type(cmd) == list else cmd
+        PiusUtil.debug("Running: %s" % outcmd)
 
     def clean_files(flist):
         """Delete a list of files."""
