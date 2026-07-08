@@ -36,9 +36,8 @@ from libpius.constants import (
 BADKEYS_RE = re.compile(r"00000000|12345678|no pgp key")
 LIST_SEP_RE = re.compile(r"\s*,\s*")
 DEFAULT_KEYSERVERS = [
-    "pool.sks-keyservers.net",
     "pgp.mit.edu",
-    "keys.gnupg.net",
+    "keys.openpgp.org",
 ]
 DEFAULT_GPG_PATH = "/usr/bin/gpg"
 DEFAULT_CSV_DELIMITER = ","
