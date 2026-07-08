@@ -7,7 +7,7 @@ import socket
 import sys
 
 from email import message
-from email.utils import formatdate
+from email.utils import formatdate, make_msgid
 
 from email import mime
 from email.mime import multipart
@@ -385,6 +385,7 @@ class PiusMailer:
         else:
             msg["To"] = to
         msg["Date"] = formatdate(localtime=True)
+        msg["Message-ID"] = make_msgid()
 
         try:
             if self.ssl:
